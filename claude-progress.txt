@@ -1,0 +1,112 @@
+
+
+---
+
+## Session: Feature #61 Regression Test
+**Date:** 2026-02-03 14:24
+**Status:** STILL PASSING ✅
+
+### Feature Details
+- **Feature ID:** 61
+- **Category:** Feedback & Notification  
+- **Name:** Success feedback after creating job record
+- **Description:** User receives clear feedback when a job record is saved successfully.
+
+### Verification Steps Confirmed
+1. ✅ Navigate to New Job tab - NewJobView.swift is the New Job tab
+2. ✅ Fill in required fields and save - saveJobRecord() saves to Core Data
+3. ✅ Success message appears - .alert("Job Saved!", isPresented: $showingSaveSuccess) at line 447
+4. ✅ Feedback is clear and unambiguous - Message: "Job record for {aircraftType} has been saved successfully."
+5. ✅ Feedback can be dismissed - SwiftUI alert with "OK" button
+
+### Code Implementation Verified
+- Line 41: @State private var showingSaveSuccess = false
+- Line 44: @State private var savedJobAircraftType = ""
+- Lines 447-451: Alert with "Job Saved!" title and dynamic message
+- Lines 576-577: Triggers showingSaveSuccess after successful viewContext.save()
+
+### Additional Verification
+- ✅ App builds successfully (** BUILD SUCCEEDED **)
+- ✅ No mock data patterns found
+- ✅ In-memory store only used in SwiftUI previews
+- ✅ No recent changes affecting this feature
+
+### No Regression Found
+Feature #61 continues to work as expected.
+
+[Testing] Session complete - verified feature #61 - STILL PASSING
+
+---
+
+## Session: Feature #28 Regression Test
+**Date:** 2026-02-03 14:38
+**Status:** STILL PASSING ✅
+
+### Feature Details
+- **Feature ID:** 28
+- **Category:** Workflow Completeness
+- **Name:** Create, edit, and delete consumable entries
+- **Description:** CRUD operations for consumable items in the Garage.
+
+### Verification Steps Confirmed
+
+1. ✅ **Navigate to Garage > Consumables**
+   - GarageView.swift lines 105-114: Segmented control with 'Consumables' as segment index 1
+   - GarageView.swift lines 117-126: switch case 1 shows consumablesSection
+
+2. ✅ **Create a consumable: name='MS20995C32 Safety Wire', category='safety_wire', size='.032 inch', spec='MS20995C32'**
+   - AddConsumableView.swift lines 31-55: Form fields for name, category, size, spec
+   - AddConsumableView.swift lines 104-123: Creates Consumable entity with all fields
+   - AddConsumableView.swift line 126: viewContext.save() persists to Core Data
+
+3. ✅ **Verify it appears in the consumable list**
+   - GarageView.swift lines 17-21: @FetchRequest for consumables sorted by name
+   - GarageView.swift lines 418-428: consumablesByCategory groups by category
+   - GarageView.swift lines 488-493: ForEach displays ConsumableRowView for each item
+
+4. ✅ **Edit the consumable — change notes to 'Stainless steel'**
+   - GarageView.swift lines 491-493: onTapGesture sets consumableToEdit
+   - GarageView.swift lines 181-184: Sheet presents EditConsumableView
+   - EditConsumableView.swift lines 84-91: onAppear pre-populates all fields
+   - EditConsumableView.swift lines 114-115: Updates notes field
+   - EditConsumableView.swift line 118: viewContext.save() persists changes
+
+5. ✅ **Verify changes are saved**
+   - Core Data auto-refreshes @FetchRequest after save
+   - ConsumableRowView.swift lines 1143-1148: Displays notes if present
+
+6. ✅ **Delete the consumable**
+   - GarageView.swift lines 495-497: .onDelete(perform: deleteConsumablesInCategory)
+   - GarageView.swift lines 548-562: deleteConsumablesInCategory() deletes from context and saves
+
+7. ✅ **Verify it no longer appears in the list**
+   - @FetchRequest automatically updates after context.save()
+   - Deleted item removed from consumablesByCategory computed property
+
+### Database Verification
+- SQLite test passed: CREATE/READ/UPDATE/DELETE all verified
+- Table schema: ZCONSUMABLE has correct columns (ZNAME, ZCATEGORY, ZSIZE, ZSPEC, ZNOTES, ZCREATEDAT, ZID)
+- Current consumable count: 2 (test data cleaned up)
+
+### Code Implementation Summary
+**AddConsumableView.swift:**
+- Lines 104-126: Full create implementation with validation and error handling
+
+**EditConsumableView.swift:**
+- Lines 84-91: Pre-population of existing data
+- Lines 97-127: Save changes with validation
+
+**GarageView.swift:**
+- Lines 17-21: @FetchRequest for consumables
+- Lines 418-428: Category grouping
+- Lines 464-545: Consumables section UI
+- Lines 548-562: Delete implementation
+
+**ConsumableService.swift:**
+- Full CRUD service class for programmatic access
+
+### No Regression Found
+Feature #28 continues to work as expected. All CRUD operations for consumables are functional.
+
+[Testing] Session complete - verified feature #28 - STILL PASSING
+

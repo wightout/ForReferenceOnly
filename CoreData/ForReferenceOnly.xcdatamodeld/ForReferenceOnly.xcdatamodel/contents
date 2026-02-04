@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23231" systemVersion="24A335" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="NO" userDefinedModelVersionIdentifier="">
+    <entity name="JobRecord" representedClassName="JobRecord" syncable="YES" codeGenerationType="class">
+        <attribute name="aircraftSerialNumber" optional="YES" attributeType="String"/>
+        <attribute name="aircraftType" attributeType="String" defaultValueString=""/>
+        <attribute name="component" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="currentVersion" attributeType="Integer 32" defaultValueString="1" usesScalarValueType="YES"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="jobDate" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="nNumber" optional="YES" attributeType="String"/>
+        <attribute name="notes" optional="YES" attributeType="String"/>
+        <attribute name="recommendations" optional="YES" attributeType="String"/>
+        <attribute name="system" attributeType="String" defaultValueString=""/>
+        <attribute name="taskDescription" optional="YES" attributeType="String"/>
+        <attribute name="tmReferences" optional="YES" attributeType="String"/>
+        <attribute name="updatedAt" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="chemicals" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Chemical" inverseName="jobRecords" inverseEntity="Chemical"/>
+        <relationship name="consumables" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Consumable" inverseName="jobRecords" inverseEntity="Consumable"/>
+        <relationship name="revisions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="JobRevision" inverseName="jobRecord" inverseEntity="JobRevision"/>
+        <relationship name="tools" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Tool" inverseName="jobRecords" inverseEntity="Tool"/>
+        <relationship name="voiceMemo" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="VoiceMemo" inverseName="jobRecord" inverseEntity="VoiceMemo"/>
+    </entity>
+    <entity name="JobRevision" representedClassName="JobRevision" syncable="YES" codeGenerationType="class">
+        <attribute name="editNotes" optional="YES" attributeType="String"/>
+        <attribute name="editedAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="snapshotData" optional="YES" attributeType="Binary"/>
+        <attribute name="versionNumber" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="jobRecord" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="JobRecord" inverseName="revisions" inverseEntity="JobRecord"/>
+    </entity>
+    <entity name="Tool" representedClassName="Tool" syncable="YES" codeGenerationType="class">
+        <attribute name="aliases" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromDataTransformerName"/>
+        <attribute name="borrowedFrom" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" attributeType="String" defaultValueString=""/>
+        <attribute name="notes" optional="YES" attributeType="String"/>
+        <attribute name="ownershipType" attributeType="String" defaultValueString="personal"/>
+        <relationship name="group" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ToolGroup" inverseName="tools" inverseEntity="ToolGroup"/>
+        <relationship name="jobRecords" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="JobRecord" inverseName="tools" inverseEntity="JobRecord"/>
+        <relationship name="toolKits" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ToolKit" inverseName="tools" inverseEntity="ToolKit"/>
+    </entity>
+    <entity name="ToolGroup" representedClassName="ToolGroup" syncable="YES" codeGenerationType="class">
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" attributeType="String" defaultValueString=""/>
+        <attribute name="sortOrder" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="childGroups" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ToolGroup" inverseName="parentGroup" inverseEntity="ToolGroup"/>
+        <relationship name="parentGroup" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ToolGroup" inverseName="childGroups" inverseEntity="ToolGroup"/>
+        <relationship name="tools" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Tool" inverseName="group" inverseEntity="Tool"/>
+    </entity>
+    <entity name="ToolKit" representedClassName="ToolKit" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="descriptionText" optional="YES" attributeType="String"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" attributeType="String" defaultValueString=""/>
+        <relationship name="tools" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Tool" inverseName="toolKits" inverseEntity="Tool"/>
+    </entity>
+    <entity name="Consumable" representedClassName="Consumable" syncable="YES" codeGenerationType="class">
+        <attribute name="category" attributeType="String" defaultValueString="other"/>
+        <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" attributeType="String" defaultValueString=""/>
+        <attribute name="notes" optional="YES" attributeType="String"/>
+        <attribute name="size" optional="YES" attributeType="String"/>
+        <attribute name="spec" optional="YES" attributeType="String"/>
+        <relationship name="jobRecords" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="JobRecord" inverseName="consumables" inverseEntity="JobRecord"/>
+    </entity>
+    <entity name="Chemical" representedClassName="Chemical" syncable="YES" codeGenerationType="class">
+        <attribute name="category" attributeType="String" defaultValueString="other"/>
+        <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" attributeType="String" defaultValueString=""/>
+        <attribute name="notes" optional="YES" attributeType="String"/>
+        <attribute name="size" optional="YES" attributeType="String"/>
+        <attribute name="spec" optional="YES" attributeType="String"/>
+        <relationship name="jobRecords" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="JobRecord" inverseName="chemicals" inverseEntity="JobRecord"/>
+    </entity>
+    <entity name="VoiceMemo" representedClassName="VoiceMemo" syncable="YES" codeGenerationType="class">
+        <attribute name="audioFilePath" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="identifiedChemicals" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromDataTransformerName"/>
+        <attribute name="identifiedConsumables" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromDataTransformerName"/>
+        <attribute name="identifiedTools" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromDataTransformerName"/>
+        <attribute name="transcriptionStatus" attributeType="String" defaultValueString="pending"/>
+        <attribute name="transcriptionText" optional="YES" attributeType="String"/>
+        <relationship name="jobRecord" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="JobRecord" inverseName="voiceMemo" inverseEntity="JobRecord"/>
+    </entity>
+</model>

@@ -1,0 +1,584 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000010000000000000001 /* ForReferenceOnlyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000001 /* ForReferenceOnlyApp.swift */; };
+		A10000010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000002 /* ContentView.swift */; };
+		A10000010000000000000003 /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000003 /* PersistenceController.swift */; };
+		A10000010000000000000004 /* SchemaVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* SchemaVerifier.swift */; };
+		A10000010000000000000005 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000005 /* DashboardView.swift */; };
+		A10000010000000000000006 /* NewJobView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* NewJobView.swift */; };
+		A10000010000000000000007 /* GarageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000007 /* GarageView.swift */; };
+		A10000010000000000000008 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* SearchView.swift */; };
+		A10000010000000000000009 /* ForReferenceOnly.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* ForReferenceOnly.xcdatamodeld */; };
+		A1000001000000000000000A /* ToolService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000C /* ToolService.swift */; };
+		A1000001000000000000000B /* AddToolView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000D /* AddToolView.swift */; };
+		A1000001000000000000000C /* JobRecordService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000E /* JobRecordService.swift */; };
+		A1000001000000000000000D /* ConsumableService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000F /* ConsumableService.swift */; };
+		A1000001000000000000000E /* ChemicalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* ChemicalService.swift */; };
+		A1000001000000000000000F /* SearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* SearchService.swift */; };
+		A10000010000000000000010 /* AddConsumableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000012 /* AddConsumableView.swift */; };
+		A10000010000000000000011 /* EditConsumableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000013 /* EditConsumableView.swift */; };
+		A10000010000000000000012 /* AddChemicalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000014 /* AddChemicalView.swift */; };
+		A10000010000000000000013 /* EditChemicalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000015 /* EditChemicalView.swift */; };
+		A10000010000000000000014 /* GarageToolPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000016 /* GarageToolPickerView.swift */; };
+		A10000010000000000000015 /* JobDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000017 /* JobDetailView.swift */; };
+		A10000010000000000000020 /* VoiceCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000020 /* VoiceCaptureService.swift */; };
+		A10000010000000000000021 /* VoiceCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000021 /* VoiceCaptureView.swift */; };
+		A10000010000000000000030 /* EditJobView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000030 /* EditJobView.swift */; };
+		A10000010000000000000031 /* VersionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000031 /* VersionHistoryView.swift */; };
+		A10000010000000000000032 /* RevisionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032 /* RevisionDetailView.swift */; };
+		A10000010000000000000040 /* GarageConsumablePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000040 /* GarageConsumablePickerView.swift */; };
+		A10000010000000000000041 /* GarageChemicalPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000041 /* GarageChemicalPickerView.swift */; };
+		A10000010000000000000042 /* ToolDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000042 /* ToolDetailView.swift */; };
+		A10000010000000000000050 /* PDFService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000050 /* PDFService.swift */; };
+		A10000010000000000000060 /* TranscriptionCandidateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000060 /* TranscriptionCandidateService.swift */; };
+		A10000010000000000000061 /* CandidateReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000061 /* CandidateReviewView.swift */; };
+		A10000010000000000000070 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000070 /* WelcomeView.swift */; };
+		A10000010000000000000080 /* EditToolView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000080 /* EditToolView.swift */; };
+		A10000010000000000000081 /* AddToolGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000081 /* AddToolGroupView.swift */; };
+		A10000010000000000000082 /* ToolGroupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000082 /* ToolGroupService.swift */; };
+		A10000010000000000000083 /* AddToolKitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000083 /* AddToolKitView.swift */; };
+		A10000010000000000000090 /* PurchaseJustificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000090 /* PurchaseJustificationView.swift */; };
+		A10000010000000000000100 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000100 /* AboutView.swift */; };
+		A10000010000000000000200 /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000200 /* ExportService.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A20000010000000000000001 /* ForReferenceOnlyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForReferenceOnlyApp.swift; sourceTree = "<group>"; };
+		A20000010000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A20000010000000000000003 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
+		A20000010000000000000004 /* SchemaVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaVerifier.swift; sourceTree = "<group>"; };
+		A20000010000000000000005 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		A20000010000000000000006 /* NewJobView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewJobView.swift; sourceTree = "<group>"; };
+		A20000010000000000000007 /* GarageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarageView.swift; sourceTree = "<group>"; };
+		A20000010000000000000008 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		A2000001000000000000000A /* ForReferenceOnly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ForReferenceOnly.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2000001000000000000000B /* ForReferenceOnly.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ForReferenceOnly.xcdatamodel; sourceTree = "<group>"; };
+		A2000001000000000000000C /* ToolService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolService.swift; sourceTree = "<group>"; };
+		A2000001000000000000000D /* AddToolView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToolView.swift; sourceTree = "<group>"; };
+		A2000001000000000000000E /* JobRecordService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobRecordService.swift; sourceTree = "<group>"; };
+		A2000001000000000000000F /* ConsumableService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsumableService.swift; sourceTree = "<group>"; };
+		A20000010000000000000010 /* ChemicalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChemicalService.swift; sourceTree = "<group>"; };
+		A20000010000000000000011 /* SearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchService.swift; sourceTree = "<group>"; };
+		A20000010000000000000012 /* AddConsumableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddConsumableView.swift; sourceTree = "<group>"; };
+		A20000010000000000000013 /* EditConsumableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditConsumableView.swift; sourceTree = "<group>"; };
+		A20000010000000000000014 /* AddChemicalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddChemicalView.swift; sourceTree = "<group>"; };
+		A20000010000000000000015 /* EditChemicalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditChemicalView.swift; sourceTree = "<group>"; };
+		A20000010000000000000016 /* GarageToolPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarageToolPickerView.swift; sourceTree = "<group>"; };
+		A20000010000000000000017 /* JobDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDetailView.swift; sourceTree = "<group>"; };
+		A20000010000000000000020 /* VoiceCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCaptureService.swift; sourceTree = "<group>"; };
+		A20000010000000000000021 /* VoiceCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCaptureView.swift; sourceTree = "<group>"; };
+		A20000010000000000000030 /* EditJobView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditJobView.swift; sourceTree = "<group>"; };
+		A20000010000000000000031 /* VersionHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionHistoryView.swift; sourceTree = "<group>"; };
+		A20000010000000000000032 /* RevisionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevisionDetailView.swift; sourceTree = "<group>"; };
+		A20000010000000000000040 /* GarageConsumablePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarageConsumablePickerView.swift; sourceTree = "<group>"; };
+		A20000010000000000000041 /* GarageChemicalPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GarageChemicalPickerView.swift; sourceTree = "<group>"; };
+		A20000010000000000000042 /* ToolDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolDetailView.swift; sourceTree = "<group>"; };
+		A20000010000000000000050 /* PDFService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFService.swift; sourceTree = "<group>"; };
+		A20000010000000000000060 /* TranscriptionCandidateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionCandidateService.swift; sourceTree = "<group>"; };
+		A20000010000000000000061 /* CandidateReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CandidateReviewView.swift; sourceTree = "<group>"; };
+		A20000010000000000000070 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		A20000010000000000000080 /* EditToolView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditToolView.swift; sourceTree = "<group>"; };
+		A20000010000000000000081 /* AddToolGroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToolGroupView.swift; sourceTree = "<group>"; };
+		A20000010000000000000082 /* ToolGroupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolGroupService.swift; sourceTree = "<group>"; };
+		A20000010000000000000083 /* AddToolKitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToolKitView.swift; sourceTree = "<group>"; };
+		A20000010000000000000090 /* PurchaseJustificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseJustificationView.swift; sourceTree = "<group>"; };
+		A20000010000000000000100 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		A20000010000000000000200 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A30000010000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A40000010000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A40000010000000000000002 /* ForReferenceOnly */,
+				A40000010000000000000010 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A40000010000000000000002 /* ForReferenceOnly */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000001 /* ForReferenceOnlyApp.swift */,
+				A40000010000000000000003 /* CoreData */,
+				A40000010000000000000004 /* Views */,
+				A4000001000000000000000B /* Services */,
+			);
+			name = ForReferenceOnly;
+			sourceTree = "<group>";
+		};
+		A40000010000000000000003 /* CoreData */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000003 /* PersistenceController.swift */,
+				A20000010000000000000004 /* SchemaVerifier.swift */,
+				A20000010000000000000009 /* ForReferenceOnly.xcdatamodeld */,
+			);
+			path = CoreData;
+			sourceTree = "<group>";
+		};
+		A40000010000000000000004 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A40000010000000000000005 /* Shared */,
+				A40000010000000000000006 /* Dashboard */,
+				A40000010000000000000007 /* NewJob */,
+				A40000010000000000000008 /* Garage */,
+				A40000010000000000000009 /* Search */,
+				A4000001000000000000000C /* JobDetail */,
+				A40000010000000000000070 /* Onboarding */,
+				A40000010000000000000100 /* Settings */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A40000010000000000000005 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000002 /* ContentView.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		A40000010000000000000006 /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000005 /* DashboardView.swift */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		A40000010000000000000007 /* NewJob */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000006 /* NewJobView.swift */,
+				A20000010000000000000021 /* VoiceCaptureView.swift */,
+				A20000010000000000000061 /* CandidateReviewView.swift */,
+			);
+			path = NewJob;
+			sourceTree = "<group>";
+		};
+		A40000010000000000000008 /* Garage */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000007 /* GarageView.swift */,
+				A2000001000000000000000D /* AddToolView.swift */,
+				A20000010000000000000012 /* AddConsumableView.swift */,
+				A20000010000000000000013 /* EditConsumableView.swift */,
+				A20000010000000000000014 /* AddChemicalView.swift */,
+				A20000010000000000000015 /* EditChemicalView.swift */,
+				A20000010000000000000016 /* GarageToolPickerView.swift */,
+				A20000010000000000000040 /* GarageConsumablePickerView.swift */,
+				A20000010000000000000041 /* GarageChemicalPickerView.swift */,
+				A20000010000000000000042 /* ToolDetailView.swift */,
+				A20000010000000000000080 /* EditToolView.swift */,
+				A20000010000000000000081 /* AddToolGroupView.swift */,
+				A20000010000000000000083 /* AddToolKitView.swift */,
+				A20000010000000000000090 /* PurchaseJustificationView.swift */,
+			);
+			path = Garage;
+			sourceTree = "<group>";
+		};
+		A40000010000000000000009 /* Search */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000008 /* SearchView.swift */,
+			);
+			path = Search;
+			sourceTree = "<group>";
+		};
+		A4000001000000000000000B /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A2000001000000000000000C /* ToolService.swift */,
+				A2000001000000000000000E /* JobRecordService.swift */,
+				A2000001000000000000000F /* ConsumableService.swift */,
+				A20000010000000000000010 /* ChemicalService.swift */,
+				A20000010000000000000011 /* SearchService.swift */,
+				A20000010000000000000020 /* VoiceCaptureService.swift */,
+				A20000010000000000000050 /* PDFService.swift */,
+				A20000010000000000000060 /* TranscriptionCandidateService.swift */,
+				A20000010000000000000082 /* ToolGroupService.swift */,
+				A20000010000000000000200 /* ExportService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A4000001000000000000000C /* JobDetail */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000017 /* JobDetailView.swift */,
+				A20000010000000000000030 /* EditJobView.swift */,
+				A20000010000000000000031 /* VersionHistoryView.swift */,
+				A20000010000000000000032 /* RevisionDetailView.swift */,
+			);
+			path = JobDetail;
+			sourceTree = "<group>";
+		};
+		A40000010000000000000010 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A2000001000000000000000A /* ForReferenceOnly.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A40000010000000000000070 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000070 /* WelcomeView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		A40000010000000000000100 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000100 /* AboutView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A50000010000000000000001 /* ForReferenceOnly */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A70000010000000000000003 /* Build configuration list for PBXNativeTarget "ForReferenceOnly" */;
+			buildPhases = (
+				A60000010000000000000001 /* Sources */,
+				A30000010000000000000001 /* Frameworks */,
+				A80000010000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ForReferenceOnly;
+			productName = ForReferenceOnly;
+			productReference = A2000001000000000000000A /* ForReferenceOnly.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A90000010000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1540;
+				LastUpgradeCheck = 1540;
+				TargetAttributes = {
+					A50000010000000000000001 = {
+						CreatedOnToolsVersion = 15.4;
+					};
+				};
+			};
+			buildConfigurationList = A70000010000000000000001 /* Build configuration list for PBXProject "ForReferenceOnly" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A40000010000000000000001;
+			productRefGroup = A40000010000000000000010 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A50000010000000000000001 /* ForReferenceOnly */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A80000010000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A60000010000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000010000000000000001 /* ForReferenceOnlyApp.swift in Sources */,
+				A10000010000000000000002 /* ContentView.swift in Sources */,
+				A10000010000000000000003 /* PersistenceController.swift in Sources */,
+				A10000010000000000000004 /* SchemaVerifier.swift in Sources */,
+				A10000010000000000000005 /* DashboardView.swift in Sources */,
+				A10000010000000000000006 /* NewJobView.swift in Sources */,
+				A10000010000000000000007 /* GarageView.swift in Sources */,
+				A10000010000000000000008 /* SearchView.swift in Sources */,
+				A10000010000000000000009 /* ForReferenceOnly.xcdatamodeld in Sources */,
+				A1000001000000000000000A /* ToolService.swift in Sources */,
+				A1000001000000000000000B /* AddToolView.swift in Sources */,
+				A1000001000000000000000C /* JobRecordService.swift in Sources */,
+				A1000001000000000000000D /* ConsumableService.swift in Sources */,
+				A1000001000000000000000E /* ChemicalService.swift in Sources */,
+				A1000001000000000000000F /* SearchService.swift in Sources */,
+				A10000010000000000000010 /* AddConsumableView.swift in Sources */,
+				A10000010000000000000011 /* EditConsumableView.swift in Sources */,
+				A10000010000000000000012 /* AddChemicalView.swift in Sources */,
+				A10000010000000000000013 /* EditChemicalView.swift in Sources */,
+				A10000010000000000000014 /* GarageToolPickerView.swift in Sources */,
+				A10000010000000000000015 /* JobDetailView.swift in Sources */,
+				A10000010000000000000030 /* EditJobView.swift in Sources */,
+				A10000010000000000000020 /* VoiceCaptureService.swift in Sources */,
+				A10000010000000000000021 /* VoiceCaptureView.swift in Sources */,
+				A10000010000000000000031 /* VersionHistoryView.swift in Sources */,
+				A10000010000000000000032 /* RevisionDetailView.swift in Sources */,
+				A10000010000000000000040 /* GarageConsumablePickerView.swift in Sources */,
+				A10000010000000000000041 /* GarageChemicalPickerView.swift in Sources */,
+				A10000010000000000000042 /* ToolDetailView.swift in Sources */,
+				A10000010000000000000050 /* PDFService.swift in Sources */,
+				A10000010000000000000060 /* TranscriptionCandidateService.swift in Sources */,
+				A10000010000000000000061 /* CandidateReviewView.swift in Sources */,
+				A10000010000000000000070 /* WelcomeView.swift in Sources */,
+				A10000010000000000000080 /* EditToolView.swift in Sources */,
+				A10000010000000000000081 /* AddToolGroupView.swift in Sources */,
+				A10000010000000000000082 /* ToolGroupService.swift in Sources */,
+				A10000010000000000000083 /* AddToolKitView.swift in Sources */,
+				A10000010000000000000090 /* PurchaseJustificationView.swift in Sources */,
+				A10000010000000000000100 /* AboutView.swift in Sources */,
+				A10000010000000000000200 /* ExportService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A70000020000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A70000020000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A70000020000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRO needs microphone access for voice capture during job logging.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "FRO uses speech recognition to transcribe your voice memos into job records.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fro.ForReferenceOnly;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		A70000020000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FRO needs microphone access for voice capture during job logging.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "FRO uses speech recognition to transcribe your voice memos into job records.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fro.ForReferenceOnly;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A70000010000000000000001 /* Build configuration list for PBXProject "ForReferenceOnly" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A70000020000000000000001 /* Debug */,
+				A70000020000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A70000010000000000000003 /* Build configuration list for PBXNativeTarget "ForReferenceOnly" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A70000020000000000000003 /* Debug */,
+				A70000020000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCVersionGroup section */
+		A20000010000000000000009 /* ForReferenceOnly.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				A2000001000000000000000B /* ForReferenceOnly.xcdatamodel */,
+			);
+			currentVersion = A2000001000000000000000B /* ForReferenceOnly.xcdatamodel */;
+			path = ForReferenceOnly.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
+	};
+	rootObject = A90000010000000000000001 /* Project object */;
+}
