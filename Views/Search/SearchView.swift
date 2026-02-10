@@ -1,9 +1,10 @@
 import SwiftUI
-import CoreData
+import Foundation
+import SwiftData
 
 /// Universal search view with search bar, filter area, and fuzzy/typo-tolerant matching.
 struct SearchView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.modelContext) private var viewContext
 
     @State private var searchText: String = ""
     @State private var selectedFilter: SearchFilter = .all
@@ -25,41 +26,36 @@ struct SearchView: View {
 
     /// Fetch job records for search results
     /// Feature #74: Sort by jobDate for correct date boundary sorting
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \JobRecord.jobDate, ascending: false)],
-        animation: .default
-    )
-    private var allJobRecords: FetchedResults<JobRecord>
+    @Query(sort: \FROJob.jobDate, order: .reverse)
+    private var allJobRecords: [FROJob]
 
     /// Fetch all tools for tool/alias search
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Tool.name, ascending: true)],
-        animation: .default
-    )
-    private var allTools: FetchedResults<Tool>
+    @Query(sort: \FROTool.name, order: .forward)
+    private var allTools: [FROTool]
 
     /// Unique aircraft types from all job records (for filter dropdown)
     private var availableAircraftTypes: [String] {
-        let types = allJobRecords.compactMap { $0.aircraftType }
+        let types = allJobRecords.map { $0.aircraftType }
         return Array(Set(types)).sorted()
     }
 
     /// Tools matching the search query (by name or alias) with fuzzy matching
+    /// Feature #90: Results sorted by size (smallest first, inch before metric, no-size last)
     private var filteredTools: [Tool] {
         guard !searchText.isEmpty else { return [] }
         return allTools.filter { tool in
             // Fuzzy match by name
-            if let name = tool.name, searchService.fuzzyMatches(query: searchText, target: name) {
+            if searchService.fuzzyMatches(query: searchText, target: tool.name) {
                 return true
             }
             // Fuzzy match by alias
-            if let aliases = tool.aliases as? [String] {
+            if let aliases = tool.aliases {
                 if aliases.contains(where: { searchService.fuzzyMatches(query: searchText, target: $0) }) {
                     return true
                 }
             }
             return false
-        }
+        }.sortedBySize()
     }
 
     /// Jobs filtered by aircraft type selection (independent of search text)
@@ -68,7 +64,7 @@ struct SearchView: View {
             return Array(allJobRecords)
         }
         return allJobRecords.filter { job in
-            (job.aircraftType ?? "").lowercased() == aircraftType.lowercased()
+            job.aircraftType.lowercased() == aircraftType.lowercased()
         }
     }
 
@@ -89,9 +85,9 @@ struct SearchView: View {
             case .all:
                 return fuzzyMatchesAny(job: job, query: searchText)
             case .aircraftType:
-                return searchService.fuzzyMatches(query: searchText, target: job.aircraftType ?? "")
+                return searchService.fuzzyMatches(query: searchText, target: job.aircraftType)
             case .system:
-                return searchService.fuzzyMatches(query: searchText, target: job.system ?? "")
+                return searchService.fuzzyMatches(query: searchText, target: job.system)
             case .component:
                 return searchService.fuzzyMatches(query: searchText, target: job.component ?? "")
             case .tool:
@@ -108,14 +104,14 @@ struct SearchView: View {
 
     /// Check if job has a linked tool matching the query (by name or alias) with fuzzy matching
     private func jobContainsToolFuzzy(job: JobRecord, query: String) -> Bool {
-        guard let tools = job.tools as? Set<Tool> else { return false }
+        guard let tools = job.tools else { return false }
         return tools.contains { tool in
             // Fuzzy match by name
-            if let name = tool.name, searchService.fuzzyMatches(query: query, target: name) {
+            if searchService.fuzzyMatches(query: query, target: tool.name) {
                 return true
             }
             // Fuzzy match by alias
-            if let aliases = tool.aliases as? [String] {
+            if let aliases = tool.aliases {
                 if aliases.contains(where: { searchService.fuzzyMatches(query: query, target: $0) }) {
                     return true
                 }
@@ -126,9 +122,9 @@ struct SearchView: View {
 
     /// Check if job has a linked consumable matching the query (by name) with fuzzy matching
     private func jobContainsConsumableFuzzy(job: JobRecord, query: String) -> Bool {
-        guard let consumables = job.consumables as? Set<Consumable> else { return false }
+        guard let consumables = job.consumables else { return false }
         return consumables.contains { consumable in
-            searchService.fuzzyMatches(query: query, target: consumable.name ?? "")
+            searchService.fuzzyMatches(query: query, target: consumable.name)
         }
     }
 
@@ -270,24 +266,23 @@ struct SearchView: View {
                         // Show tool results for Tool filter or All filter
                         if (selectedFilter == .tool || selectedFilter == .all) && !filteredTools.isEmpty {
                             Section(header: Text("Tools")) {
-                                ForEach(filteredTools, id: \.objectID) { tool in
-                                    NavigationLink(destination: ToolDetailView(tool: tool).environment(\.managedObjectContext, viewContext)) {
+                                ForEach(filteredTools, id: \.id) { tool in
+                                    NavigationLink(destination: ToolDetailView(tool: tool).modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
                                         VStack(alignment: .leading, spacing: 4) {
                                             HStack(spacing: 8) {
                                                 Image(systemName: "wrench.and.screwdriver.fill")
                                                     .foregroundColor(Color(red: 0.392, green: 0.455, blue: 0.545))
                                                     .font(.body)
-                                                Text(tool.name ?? "Unnamed Tool")
+                                                Text(tool.name)
                                                     .font(.headline)
                                             }
-                                            if let aliases = tool.aliases as? [String], !aliases.isEmpty {
+                                            if let aliases = tool.aliases, !aliases.isEmpty {
                                                 Text("aka: \(aliases.joined(separator: ", "))")
                                                     .font(.caption)
                                                     .foregroundColor(.secondary)
                                                     .italic()
                                             }
-                                            if let ownership = tool.ownershipType {
-                                                Text(ownership.capitalized)
+                                            Text(tool.ownershipType.capitalized)
                                                     .font(.caption2)
                                                     .fontWeight(.medium)
                                                     .padding(.horizontal, 6)
@@ -295,7 +290,6 @@ struct SearchView: View {
                                                     .background(Color(red: 0.145, green: 0.388, blue: 0.922).opacity(0.15))
                                                     .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
                                                     .cornerRadius(4)
-                                            }
                                         }
                                         .padding(.vertical, 4)
                                     }
@@ -307,8 +301,8 @@ struct SearchView: View {
                         // Feature #81: Search results display as job record cards with key info
                         if !filteredRecords.isEmpty {
                             Section(header: Text("Job Records")) {
-                                ForEach(filteredRecords, id: \.objectID) { job in
-                                    NavigationLink(destination: JobDetailView(job: job).environment(\.managedObjectContext, viewContext)) {
+                                ForEach(filteredRecords, id: \.id) { job in
+                                    NavigationLink(destination: JobDetailView(job: job).modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
                                         SearchResultCardView(job: job)
                                     }
                                     .buttonStyle(.plain)
@@ -381,22 +375,18 @@ struct AircraftTypeChip: View {
 /// Feature #81: Displays aircraft type, date, and system at minimum.
 /// Tapping opens the full job detail view via NavigationLink.
 struct SearchResultCardView: View {
-    @ObservedObject var job: JobRecord
+    @Bindable var job: JobRecord
 
     /// Accessibility description combining key job info
     private var accessibilityDescription: String {
         var parts: [String] = []
-        if let aircraft = job.aircraftType {
-            parts.append(aircraft)
+        parts.append(job.aircraftType)
+        if !job.system.isEmpty {
+            parts.append(job.system)
         }
-        if let system = job.system, !system.isEmpty {
-            parts.append(system)
-        }
-        if let date = job.jobDate {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .medium
-            parts.append(formatter.string(from: date))
-        }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        parts.append(formatter.string(from: job.jobDate))
         return parts.joined(separator: ", ")
     }
 
@@ -404,20 +394,18 @@ struct SearchResultCardView: View {
         VStack(alignment: .leading, spacing: 6) {
             // Top row: Aircraft type and date
             HStack {
-                Text(job.aircraftType ?? "Unknown Aircraft")
+                Text(job.aircraftType.isEmpty ? "Unknown Aircraft" : job.aircraftType)
                     .font(.headline)
                     .foregroundColor(.primary)
                 Spacer()
-                if let date = job.jobDate {
-                    Text(date, style: .date)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                Text(job.jobDate, style: .date)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
 
             // System (required field per app_spec.txt)
-            if let system = job.system, !system.isEmpty {
-                Text(system)
+            if !job.system.isEmpty {
+                Text(job.system)
                     .font(.subheadline)
                     .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
             }
@@ -439,5 +427,5 @@ struct SearchResultCardView: View {
 
 #Preview {
     SearchView()
-        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
 }

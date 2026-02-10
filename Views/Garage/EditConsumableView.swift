@@ -3,10 +3,10 @@ import SwiftUI
 /// View for editing an existing consumable entry in the Garage.
 /// Pre-populates fields with existing data and saves changes to Core Data.
 struct EditConsumableView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.modelContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
 
-    @ObservedObject var consumable: Consumable
+    @Bindable var consumable: Consumable
 
     @State private var name: String = ""
     @State private var category: String = "other"
@@ -83,8 +83,8 @@ struct EditConsumableView: View {
             }
             .onAppear {
                 // Pre-populate fields with existing consumable data
-                name = consumable.name ?? ""
-                category = consumable.category ?? "other"
+                name = consumable.name
+                category = consumable.category
                 size = consumable.size ?? ""
                 spec = consumable.spec ?? ""
                 notes = consumable.notes ?? ""
@@ -119,7 +119,6 @@ struct EditConsumableView: View {
             print("EditConsumableView: Updated consumable '\(trimmedName)' in Core Data")
             dismiss()
         } catch {
-            viewContext.rollback()
             errorMessage = "Failed to save changes: \(error.localizedDescription)"
             showingError = true
             print("EditConsumableView: Save failed, rolled back - \(error)")
@@ -128,16 +127,7 @@ struct EditConsumableView: View {
 }
 
 #Preview {
-    let context = PersistenceController.preview.container.viewContext
-    let consumable = Consumable(context: context)
-    consumable.id = UUID()
-    consumable.name = "MS20995C32 Safety Wire"
-    consumable.category = "safety_wire"
-    consumable.size = ".032 inch"
-    consumable.spec = "MS20995C32"
-    consumable.notes = "Stainless steel"
-    consumable.createdAt = Date()
-
-    return EditConsumableView(consumable: consumable)
-        .environment(\.managedObjectContext, context)
+    let consumable = FROConsumable(name: "MS20995C32 Safety Wire", category: "safety_wire")
+    EditConsumableView(consumable: consumable)
+        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
 }

@@ -92,18 +92,19 @@ struct WelcomeView: View {
                     }
                     Text("This app is not authoritative maintenance data. It is a personal reference tool to help you prepare for repeat tasks. Always follow official technical manuals and procedures.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .fontWeight(.medium)
+                        .foregroundColor(Color(red: 0.3, green: 0.2, blue: 0.1))
                         .multilineTextAlignment(.center)
                         .lineSpacing(2)
                 }
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(red: 0.976, green: 0.451, blue: 0.086).opacity(0.08))
+                        .fill(Color(red: 0.976, green: 0.451, blue: 0.086).opacity(0.15))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color(red: 0.976, green: 0.451, blue: 0.086).opacity(0.3), lineWidth: 1)
+                        .stroke(Color(red: 0.976, green: 0.451, blue: 0.086).opacity(0.6), lineWidth: 1.5)
                 )
 
                 // Continue button

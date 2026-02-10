@@ -3,7 +3,7 @@ import SwiftUI
 /// View for creating a new consumable entry in the Garage.
 /// Saves directly to Core Data via the managed object context.
 struct AddConsumableView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.modelContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
 
     @State private var name: String = ""
@@ -101,11 +101,8 @@ struct AddConsumableView: View {
             return
         }
 
-        let consumable = Consumable(context: viewContext)
-        consumable.id = UUID()
-        consumable.name = trimmedName
-        consumable.category = category
-        consumable.createdAt = Date()
+        let consumable = FROConsumable(name: trimmedName, category: category)
+        viewContext.insert(consumable)
 
         let trimmedSize = size.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedSize.isEmpty {
@@ -128,7 +125,6 @@ struct AddConsumableView: View {
             savedConsumableName = trimmedName
             showingSuccess = true
         } catch {
-            viewContext.rollback()
             errorMessage = "Failed to save consumable: \(error.localizedDescription)"
             showingError = true
             print("AddConsumableView: Save failed, rolled back - \(error)")
@@ -138,5 +134,5 @@ struct AddConsumableView: View {
 
 #Preview {
     AddConsumableView()
-        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
 }

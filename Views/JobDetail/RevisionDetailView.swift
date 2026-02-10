@@ -1,5 +1,6 @@
 import SwiftUI
-import CoreData
+import Foundation
+import SwiftData
 
 /// Displays a read-only view of a historical job revision snapshot.
 /// The snapshot data is stored as JSON binary in the JobRevision entity.
@@ -27,7 +28,7 @@ struct RevisionDetailView: View {
                         .foregroundColor(Color(red: 0.976, green: 0.451, blue: 0.086))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 4)
-                        .background(Color(red: 0.976, green: 0.451, blue: 0.086).opacity(0.1))
+                        .background(Color(red: 0.976, green: 0.451, blue: 0.086).opacity(0.2))
                         .cornerRadius(4)
                     Spacer()
                 }
@@ -47,11 +48,9 @@ struct RevisionDetailView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
-                    if let editedAt = revision.editedAt {
-                        Text(editedAt, style: .date)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    Text(revision.editedAt, style: .date)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
                 .padding(.horizontal)
 
@@ -181,16 +180,90 @@ struct RevisionDetailView: View {
                     }
                 }
 
-                // Notes
+                // Feature #141: Parts Used (from snapshot)
+                if let parts = snapshot["parts"] as? [[String: Any]], !parts.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Parts Used")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+
+                        ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack {
+                                    Image(systemName: "gearshape.2.fill")
+                                        .foregroundColor(Color(red: 0.392, green: 0.455, blue: 0.545))
+                                        .font(.caption)
+                                    Text(part["nomenclature"] as? String ?? "Unnamed")
+                                        .font(.body)
+                                    Spacer()
+                                    if let qty = part["quantity"] as? Int, qty > 1 {
+                                        Text("Qty: \(qty)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                HStack(spacing: 12) {
+                                    Text("P/N: \(part["partNumber"] as? String ?? "")")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    if let alt = part["alternatePartNumber"] as? String, !alt.isEmpty {
+                                        Text("Alt: \(alt)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    if let nsn = part["nsn"] as? String, !nsn.isEmpty {
+                                        Text("NSN: \(nsn)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .padding(.leading, 20)
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
+
+                // Notes (Feature #126 - display as numbered items)
                 if let notesText = snapshot["notes"] as? String, !notesText.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Notes & Recommendations")
                             .font(.headline)
                             .foregroundColor(.secondary)
-                        Text(notesText)
-                            .font(.body)
+                            .accessibilityIdentifier("revisionNotesHeader")
+
+                        // Split notes by line breaks and display as numbered list
+                        let noteLines = notesText.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                        if noteLines.count > 1 {
+                            // Display as numbered list
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(Array(noteLines.enumerated()), id: \.offset) { index, line in
+                                    HStack(alignment: .top, spacing: 10) {
+                                        Text("\(index + 1).")
+                                            .font(.body)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922)) // Industrial blue
+                                            .frame(width: 24, alignment: .trailing)
+                                        Text(line)
+                                            .font(.body)
+                                            .foregroundColor(.primary)
+                                    }
+                                    .accessibilityElement(children: .combine)
+                                    .accessibilityLabel("Note \(index + 1): \(line)")
+                                }
+                            }
+                            .accessibilityIdentifier("revisionNotesNumberedList")
+                        } else {
+                            // Single note - display as plain text
+                            Text(notesText)
+                                .font(.body)
+                                .accessibilityIdentifier("revisionNotesSingleText")
+                        }
                     }
                     .padding(.horizontal)
+                    .accessibilityIdentifier("revisionNotesSection")
                 }
 
                 // Recommendations
@@ -230,6 +303,7 @@ struct RevisionDetailView: View {
         case "personal": return "Personal"
         case "shop": return "Shop"
         case "borrowed": return "Borrowed"
+        case "imported": return "Imported"
         default: return "Personal"
         }
     }

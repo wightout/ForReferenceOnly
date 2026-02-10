@@ -1,11 +1,12 @@
-import CoreData
+import Foundation
+import SwiftData
 
 /// Represents a matched item from the Garage identified in transcribed text.
 /// Includes the entity type, confidence level, and the matched text span.
 struct TranscriptionCandidate: Identifiable {
     let id = UUID()
     let name: String
-    let objectID: NSManagedObjectID
+    let objectID: UUID
     let type: CandidateType
     let confidence: MatchConfidence
     let matchedPhrase: String
@@ -25,27 +26,20 @@ struct TranscriptionCandidate: Identifiable {
 
 /// TranscriptionCandidateService identifies tools, consumables, and chemicals
 /// from transcribed voice text by matching against the user's Garage inventory.
-/// Uses Core Data fetch requests against the real SQLite database.
+/// Uses SwiftData fetch descriptors against the real SQLite database.
+@MainActor
 class TranscriptionCandidateService {
 
     // MARK: - Properties
 
-    private let persistenceController: PersistenceController
-
-    var viewContext: NSManagedObjectContext {
-        persistenceController.viewContext
-    }
-
-    // MARK: - Initialization
-
-    init(persistenceController: PersistenceController = .shared) {
-        self.persistenceController = persistenceController
+    private var modelContext: ModelContext {
+        SharedModelContainer.shared.mainContext
     }
 
     // MARK: - Main Identification
 
     /// Identifies candidate tools, consumables, and chemicals from transcribed text.
-    /// Fetches all Garage items from Core Data and matches them against the transcription.
+    /// Fetches all Garage items from SwiftData and matches them against the transcription.
     /// - Parameter transcription: The transcribed voice text
     /// - Returns: Array of TranscriptionCandidate objects sorted by confidence
     func identifyCandidates(from transcription: String) -> [TranscriptionCandidate] {
@@ -79,20 +73,22 @@ class TranscriptionCandidateService {
     // MARK: - Tool Matching
 
     private func matchTools(against normalizedText: String) -> [TranscriptionCandidate] {
-        let request = NSFetchRequest<Tool>(entityName: "Tool")
-        request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+        let descriptor = FetchDescriptor<FROTool>(
+            sortBy: [SortDescriptor(\.name)]
+        )
 
         do {
-            let tools = try viewContext.fetch(request)
+            let tools = try modelContext.fetch(descriptor)
             var candidates: [TranscriptionCandidate] = []
 
             for tool in tools {
-                guard let toolName = tool.name, !toolName.isEmpty else { continue }
+                let toolName = tool.name
+                guard !toolName.isEmpty else { continue }
 
-                if let match = findMatch(itemName: toolName, aliases: tool.aliases as? [String], in: normalizedText) {
+                if let match = findMatch(itemName: toolName, aliases: tool.aliases, in: normalizedText) {
                     candidates.append(TranscriptionCandidate(
                         name: toolName,
-                        objectID: tool.objectID,
+                        objectID: tool.id,
                         type: .tool,
                         confidence: match.confidence,
                         matchedPhrase: match.phrase
@@ -111,20 +107,22 @@ class TranscriptionCandidateService {
     // MARK: - Consumable Matching
 
     private func matchConsumables(against normalizedText: String) -> [TranscriptionCandidate] {
-        let request = NSFetchRequest<Consumable>(entityName: "Consumable")
-        request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+        let descriptor = FetchDescriptor<FROConsumable>(
+            sortBy: [SortDescriptor(\.name)]
+        )
 
         do {
-            let consumables = try viewContext.fetch(request)
+            let consumables = try modelContext.fetch(descriptor)
             var candidates: [TranscriptionCandidate] = []
 
             for consumable in consumables {
-                guard let name = consumable.name, !name.isEmpty else { continue }
+                let name = consumable.name
+                guard !name.isEmpty else { continue }
 
                 if let match = findMatch(itemName: name, aliases: nil, in: normalizedText) {
                     candidates.append(TranscriptionCandidate(
                         name: name,
-                        objectID: consumable.objectID,
+                        objectID: consumable.id,
                         type: .consumable,
                         confidence: match.confidence,
                         matchedPhrase: match.phrase
@@ -143,20 +141,22 @@ class TranscriptionCandidateService {
     // MARK: - Chemical Matching
 
     private func matchChemicals(against normalizedText: String) -> [TranscriptionCandidate] {
-        let request = NSFetchRequest<Chemical>(entityName: "Chemical")
-        request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+        let descriptor = FetchDescriptor<FROChemical>(
+            sortBy: [SortDescriptor(\.name)]
+        )
 
         do {
-            let chemicals = try viewContext.fetch(request)
+            let chemicals = try modelContext.fetch(descriptor)
             var candidates: [TranscriptionCandidate] = []
 
             for chemical in chemicals {
-                guard let name = chemical.name, !name.isEmpty else { continue }
+                let name = chemical.name
+                guard !name.isEmpty else { continue }
 
                 if let match = findMatch(itemName: name, aliases: nil, in: normalizedText) {
                     candidates.append(TranscriptionCandidate(
                         name: name,
-                        objectID: chemical.objectID,
+                        objectID: chemical.id,
                         type: .chemical,
                         confidence: match.confidence,
                         matchedPhrase: match.phrase
@@ -181,11 +181,11 @@ class TranscriptionCandidateService {
 
     /// Attempts to match an item name (and optional aliases) against normalized transcription text.
     /// Uses a multi-tier matching strategy:
-    /// 1. Exact full name match (case-insensitive) → High confidence
-    /// 2. All significant words present → High confidence
-    /// 3. Alias match → High confidence
-    /// 4. Most significant words present (>=50%) → Medium confidence
-    /// 5. Any significant word match (length >= 4) → Low confidence
+    /// 1. Exact full name match (case-insensitive) -> High confidence
+    /// 2. All significant words present -> High confidence
+    /// 3. Alias match -> High confidence
+    /// 4. Most significant words present (>=50%) -> Medium confidence
+    /// 5. Any significant word match (length >= 4) -> Low confidence
     private func findMatch(itemName: String, aliases: [String]?, in normalizedText: String) -> MatchResult? {
         let normalizedName = itemName.lowercased()
 
@@ -215,13 +215,13 @@ class TranscriptionCandidateService {
         let matchRatio = Double(matchedWords.count) / Double(significantWords.count)
 
         if matchRatio >= 1.0 {
-            // All significant words present → High
+            // All significant words present -> High
             return MatchResult(confidence: .high, phrase: matchedWords.joined(separator: " "))
         } else if matchRatio >= 0.5 && significantWords.count >= 2 {
-            // At least half the significant words → Medium
+            // At least half the significant words -> Medium
             return MatchResult(confidence: .medium, phrase: matchedWords.joined(separator: " "))
         } else if matchedWords.contains(where: { $0.count >= 4 }) {
-            // At least one significant word (4+ chars) matched → Low
+            // At least one significant word (4+ chars) matched -> Low
             let longMatches = matchedWords.filter { $0.count >= 4 }
             if !longMatches.isEmpty {
                 return MatchResult(confidence: .low, phrase: longMatches.joined(separator: " "))

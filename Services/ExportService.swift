@@ -1,5 +1,5 @@
 import Foundation
-import CoreData
+import SwiftData
 
 /// ExportService handles exporting all app data to JSON format for backup purposes.
 /// Exports job records, tools, consumables, chemicals, tool groups, and tool kits.
@@ -8,7 +8,7 @@ class ExportService {
 
     // MARK: - Singleton
 
-    static let shared = ExportService()
+    nonisolated(unsafe) static let shared = ExportService()
 
     private init() {}
 
@@ -25,6 +25,7 @@ class ExportService {
         let toolKits: [ToolKitExport]
         let consumables: [ConsumableExport]
         let chemicals: [ChemicalExport]
+        let parts: [PartExport]
     }
 
     struct JobRecordExport: Codable {
@@ -45,6 +46,7 @@ class ExportService {
         let toolIds: [String]
         let consumableIds: [String]
         let chemicalIds: [String]
+        let partIds: [String]
     }
 
     struct ToolExport: Codable {
@@ -63,12 +65,17 @@ class ExportService {
         let name: String
         let sortOrder: Int
         let parentGroupId: String?
+        let ownershipType: String?
+        let toolType: String?
+        let measurementType: String?
     }
 
     struct ToolKitExport: Codable {
         let id: String
         let name: String
         let descriptionText: String?
+        let ownershipType: String?
+        let toolType: String?
         let createdAt: Date?
         let toolIds: [String]
     }
@@ -93,6 +100,17 @@ class ExportService {
         let createdAt: Date?
     }
 
+    struct PartExport: Codable {
+        let id: String
+        let partNumber: String?
+        let alternatePartNumber: String?
+        let nomenclature: String?
+        let nsn: String?
+        let quantity: Int
+        let unitOfMeasure: String?
+        let notes: String?
+    }
+
     // MARK: - Export Result
 
     struct ExportResult {
@@ -109,9 +127,10 @@ class ExportService {
         let toolKits: Int
         let consumables: Int
         let chemicals: Int
+        let parts: Int
 
         var total: Int {
-            jobRecords + tools + toolGroups + toolKits + consumables + chemicals
+            jobRecords + tools + toolGroups + toolKits + consumables + chemicals + parts
         }
     }
 
@@ -120,7 +139,7 @@ class ExportService {
     /// Exports all data from Core Data to a JSON file
     /// - Parameter context: The managed object context to fetch data from
     /// - Returns: ExportResult with file URL on success or error message on failure
-    func exportAllData(context: NSManagedObjectContext) -> ExportResult {
+    func exportAllData(context: ModelContext) -> ExportResult {
         do {
             // Fetch all entities
             let jobRecords = try fetchJobRecords(context: context)
@@ -129,6 +148,7 @@ class ExportService {
             let toolKits = try fetchToolKits(context: context)
             let consumables = try fetchConsumables(context: context)
             let chemicals = try fetchChemicals(context: context)
+            let parts = try fetchParts(context: context)
 
             // Get app version
             let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
@@ -143,7 +163,8 @@ class ExportService {
                 toolGroups: toolGroups,
                 toolKits: toolKits,
                 consumables: consumables,
-                chemicals: chemicals
+                chemicals: chemicals,
+                parts: parts
             )
 
             // Encode to JSON
@@ -169,7 +190,8 @@ class ExportService {
                 toolGroups: toolGroups.count,
                 toolKits: toolKits.count,
                 consumables: consumables.count,
-                chemicals: chemicals.count
+                chemicals: chemicals.count,
+                parts: parts.count
             )
 
             print("Export completed: \(counts.total) items exported to \(fileURL.path)")
@@ -184,123 +206,101 @@ class ExportService {
 
     // MARK: - Fetch Helpers
 
-    private func fetchJobRecords(context: NSManagedObjectContext) throws -> [JobRecordExport] {
-        let request: NSFetchRequest<JobRecord> = JobRecord.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \JobRecord.createdAt, ascending: false)]
-
-        let records = try context.fetch(request)
+    private func fetchJobRecords(context: ModelContext) throws -> [JobRecordExport] {
+        let descriptor = FetchDescriptor<FROJob>(sortBy: [SortDescriptor(\FROJob.createdAt, order: .reverse)])
+        let records = try context.fetch(descriptor)
 
         return records.map { record in
-            // Get related tool IDs
-            let toolIds: [String] = (record.tools as? Set<Tool>)?
-                .compactMap { $0.id?.uuidString } ?? []
-
-            // Get related consumable IDs
-            let consumableIds: [String] = (record.consumables as? Set<Consumable>)?
-                .compactMap { $0.id?.uuidString } ?? []
-
-            // Get related chemical IDs
-            let chemicalIds: [String] = (record.chemicals as? Set<Chemical>)?
-                .compactMap { $0.id?.uuidString } ?? []
+            let toolIds: [String] = record.tools?.map { $0.id.uuidString } ?? []
+            let consumableIds: [String] = record.consumables?.map { $0.id.uuidString } ?? []
+            let chemicalIds: [String] = record.chemicals?.map { $0.id.uuidString } ?? []
+            let partIds: [String] = record.parts?.map { $0.id.uuidString } ?? []
 
             return JobRecordExport(
-                id: record.id?.uuidString ?? UUID().uuidString,
-                aircraftType: record.aircraftType ?? "",
+                id: record.id.uuidString,
+                aircraftType: record.aircraftType,
                 aircraftSerialNumber: record.aircraftSerialNumber,
                 nNumber: record.nNumber,
-                system: record.system ?? "",
+                system: record.system,
                 component: record.component,
                 jobDate: record.jobDate,
                 taskDescription: record.taskDescription,
                 tmReferences: record.tmReferences,
                 notes: record.notes,
                 recommendations: record.recommendations,
-                currentVersion: Int(record.currentVersion),
+                currentVersion: record.currentVersion,
                 createdAt: record.createdAt,
                 updatedAt: record.updatedAt,
                 toolIds: toolIds,
                 consumableIds: consumableIds,
-                chemicalIds: chemicalIds
+                chemicalIds: chemicalIds,
+                partIds: partIds
             )
         }
     }
 
-    private func fetchTools(context: NSManagedObjectContext) throws -> [ToolExport] {
-        let request: NSFetchRequest<Tool> = Tool.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \Tool.name, ascending: true)]
-
-        let tools = try context.fetch(request)
+    private func fetchTools(context: ModelContext) throws -> [ToolExport] {
+        let descriptor = FetchDescriptor<FROTool>(sortBy: [SortDescriptor(\FROTool.name)])
+        let tools = try context.fetch(descriptor)
 
         return tools.map { tool in
-            // Convert aliases from NSObject to [String]
-            let aliasArray: [String]?
-            if let aliasData = tool.aliases as? [String] {
-                aliasArray = aliasData
-            } else if let aliasData = tool.aliases as? NSArray {
-                aliasArray = aliasData.compactMap { $0 as? String }
-            } else {
-                aliasArray = nil
-            }
-
-            return ToolExport(
-                id: tool.id?.uuidString ?? UUID().uuidString,
-                name: tool.name ?? "",
-                aliases: aliasArray,
+            ToolExport(
+                id: tool.id.uuidString,
+                name: tool.name,
+                aliases: tool.aliases,
                 ownershipType: tool.ownershipType,
                 borrowedFrom: tool.borrowedFrom,
                 notes: tool.notes,
                 createdAt: tool.createdAt,
-                groupId: tool.group?.id?.uuidString
+                groupId: tool.group?.id.uuidString
             )
         }
     }
 
-    private func fetchToolGroups(context: NSManagedObjectContext) throws -> [ToolGroupExport] {
-        let request: NSFetchRequest<ToolGroup> = ToolGroup.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \ToolGroup.sortOrder, ascending: true)]
-
-        let groups = try context.fetch(request)
+    private func fetchToolGroups(context: ModelContext) throws -> [ToolGroupExport] {
+        let descriptor = FetchDescriptor<FROToolGroup>(sortBy: [SortDescriptor(\FROToolGroup.sortOrder)])
+        let groups = try context.fetch(descriptor)
 
         return groups.map { group in
             ToolGroupExport(
-                id: group.id?.uuidString ?? UUID().uuidString,
-                name: group.name ?? "",
-                sortOrder: Int(group.sortOrder),
-                parentGroupId: group.parentGroup?.id?.uuidString
+                id: group.id.uuidString,
+                name: group.name,
+                sortOrder: group.sortOrder,
+                parentGroupId: group.parentGroup?.id.uuidString,
+                ownershipType: group.ownershipType,
+                toolType: group.toolType,
+                measurementType: group.measurementType
             )
         }
     }
 
-    private func fetchToolKits(context: NSManagedObjectContext) throws -> [ToolKitExport] {
-        let request: NSFetchRequest<ToolKit> = ToolKit.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \ToolKit.name, ascending: true)]
-
-        let kits = try context.fetch(request)
+    private func fetchToolKits(context: ModelContext) throws -> [ToolKitExport] {
+        let descriptor = FetchDescriptor<FROToolKit>(sortBy: [SortDescriptor(\FROToolKit.name)])
+        let kits = try context.fetch(descriptor)
 
         return kits.map { kit in
-            let toolIds: [String] = (kit.tools as? Set<Tool>)?
-                .compactMap { $0.id?.uuidString } ?? []
+            let toolIds: [String] = kit.tools?.map { $0.id.uuidString } ?? []
 
             return ToolKitExport(
-                id: kit.id?.uuidString ?? UUID().uuidString,
-                name: kit.name ?? "",
+                id: kit.id.uuidString,
+                name: kit.name,
                 descriptionText: kit.descriptionText,
+                ownershipType: kit.ownershipType,
+                toolType: kit.toolType,
                 createdAt: kit.createdAt,
                 toolIds: toolIds
             )
         }
     }
 
-    private func fetchConsumables(context: NSManagedObjectContext) throws -> [ConsumableExport] {
-        let request: NSFetchRequest<Consumable> = Consumable.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \Consumable.name, ascending: true)]
-
-        let consumables = try context.fetch(request)
+    private func fetchConsumables(context: ModelContext) throws -> [ConsumableExport] {
+        let descriptor = FetchDescriptor<FROConsumable>(sortBy: [SortDescriptor(\FROConsumable.name)])
+        let consumables = try context.fetch(descriptor)
 
         return consumables.map { consumable in
             ConsumableExport(
-                id: consumable.id?.uuidString ?? UUID().uuidString,
-                name: consumable.name ?? "",
+                id: consumable.id.uuidString,
+                name: consumable.name,
                 category: consumable.category,
                 size: consumable.size,
                 spec: consumable.spec,
@@ -310,21 +310,37 @@ class ExportService {
         }
     }
 
-    private func fetchChemicals(context: NSManagedObjectContext) throws -> [ChemicalExport] {
-        let request: NSFetchRequest<Chemical> = Chemical.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \Chemical.name, ascending: true)]
-
-        let chemicals = try context.fetch(request)
+    private func fetchChemicals(context: ModelContext) throws -> [ChemicalExport] {
+        let descriptor = FetchDescriptor<FROChemical>(sortBy: [SortDescriptor(\FROChemical.name)])
+        let chemicals = try context.fetch(descriptor)
 
         return chemicals.map { chemical in
             ChemicalExport(
-                id: chemical.id?.uuidString ?? UUID().uuidString,
-                name: chemical.name ?? "",
+                id: chemical.id.uuidString,
+                name: chemical.name,
                 category: chemical.category,
                 size: chemical.size,
                 spec: chemical.spec,
                 notes: chemical.notes,
                 createdAt: chemical.createdAt
+            )
+        }
+    }
+
+    private func fetchParts(context: ModelContext) throws -> [PartExport] {
+        let descriptor = FetchDescriptor<FROPart>(sortBy: [SortDescriptor(\FROPart.nomenclature)])
+        let parts = try context.fetch(descriptor)
+
+        return parts.map { part in
+            PartExport(
+                id: part.id.uuidString,
+                partNumber: part.partNumber,
+                alternatePartNumber: part.alternatePartNumber,
+                nomenclature: part.nomenclature,
+                nsn: part.nsn,
+                quantity: part.quantity,
+                unitOfMeasure: part.unitOfMeasure,
+                notes: part.notes
             )
         }
     }

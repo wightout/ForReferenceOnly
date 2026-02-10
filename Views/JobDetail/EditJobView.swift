@@ -1,11 +1,31 @@
 import SwiftUI
-import CoreData
+import Foundation
+import SwiftData
+
+/// Identifies which sheet is currently presented from EditJobView.
+enum EditJobSheet: Identifiable {
+    case toolPicker
+    case consumablePicker
+    case chemicalPicker
+    case partEntry
+    case addToGaragePrompt
+
+    var id: String {
+        switch self {
+        case .toolPicker: return "toolPicker"
+        case .consumablePicker: return "consumablePicker"
+        case .chemicalPicker: return "chemicalPicker"
+        case .partEntry: return "partEntry"
+        case .addToGaragePrompt: return "addToGaragePrompt"
+        }
+    }
+}
 
 /// View for editing an existing job record.
 /// Pre-populates all fields from the existing record and saves changes back to Core Data.
 struct EditJobView: View {
-    @ObservedObject var job: JobRecord
-    @Environment(\.managedObjectContext) private var viewContext
+    @Bindable var job: JobRecord
+    @Environment(\.modelContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
 
     // MARK: - Form State (initialized from job)
@@ -23,18 +43,23 @@ struct EditJobView: View {
 
     // MARK: - Tool Selection State
 
-    @State private var selectedToolIDs: Set<NSManagedObjectID>
-    @State private var showingToolPicker = false
+    @State private var selectedToolIDs: Set<UUID>
 
     // MARK: - Consumable Selection State
 
-    @State private var selectedConsumableIDs: Set<NSManagedObjectID>
-    @State private var showingConsumablePicker = false
+    @State private var selectedConsumableIDs: Set<UUID>
 
     // MARK: - Chemical Selection State
 
-    @State private var selectedChemicalIDs: Set<NSManagedObjectID>
-    @State private var showingChemicalPicker = false
+    @State private var selectedChemicalIDs: Set<UUID>
+
+    // MARK: - Part Selection State (Feature #141)
+
+    @State private var selectedPartIDs: Set<UUID>
+
+    // MARK: - Sheet Management
+    /// Single active sheet to avoid SwiftUI's multiple .sheet modifier bug.
+    @State private var activeSheet: EditJobSheet?
 
     // MARK: - UI State
 
@@ -42,87 +67,92 @@ struct EditJobView: View {
     @State private var showingError = false
     @State private var errorMessage = ""
     @State private var showAircraftTypeRequired = false
+    /// On-the-fly tools (isInGarage = false) that were added to the job
+    @State private var onTheFlyTools: [Tool] = []
+    /// On-the-fly consumables (isInGarage = false) that were added to the job
+    @State private var onTheFlyConsumables: [Consumable] = []
+    /// On-the-fly chemicals (isInGarage = false) that were added to the job
+    @State private var onTheFlyChemicals: [Chemical] = []
 
-    // MARK: - System Options
-
-    private let systemOptions = [
-        "Hydraulics",
-        "Flight Controls",
-        "Electrical",
-        "Powerplant",
-        "Fuel System",
-        "Landing Gear",
-        "Rotor System",
-        "Drive Train",
-        "Airframe",
-        "Avionics",
-        "Environmental Control",
-        "Weapons System",
-        "Other"
-    ]
+    // MARK: - System Options (now handled by SystemAutocompleteField - Feature #102)
 
     // MARK: - Init
 
     init(job: JobRecord) {
         self.job = job
         // Pre-populate all fields from the existing job record
-        _aircraftType = State(initialValue: job.aircraftType ?? "")
+        _aircraftType = State(initialValue: job.aircraftType)
         _aircraftSerialNumber = State(initialValue: job.aircraftSerialNumber ?? "")
         _nNumber = State(initialValue: job.nNumber ?? "")
-        _selectedSystem = State(initialValue: job.system ?? "Hydraulics")
+        _selectedSystem = State(initialValue: job.system)
         _component = State(initialValue: job.component ?? "")
-        _jobDate = State(initialValue: job.jobDate ?? Date())
+        _jobDate = State(initialValue: job.jobDate)
         _taskDescription = State(initialValue: job.taskDescription ?? "")
         _tmReferences = State(initialValue: job.tmReferences ?? "")
         _notes = State(initialValue: job.notes ?? "")
         _recommendations = State(initialValue: job.recommendations ?? "")
 
         // Pre-populate linked tools
-        if let toolSet = job.tools as? Set<Tool> {
-            _selectedToolIDs = State(initialValue: Set(toolSet.map { $0.objectID }))
+        if let toolSet = job.tools {
+            _selectedToolIDs = State(initialValue: Set(toolSet.map { $0.id }))
         } else {
             _selectedToolIDs = State(initialValue: [])
         }
 
         // Pre-populate linked consumables
-        if let consumableSet = job.consumables as? Set<Consumable> {
-            _selectedConsumableIDs = State(initialValue: Set(consumableSet.map { $0.objectID }))
+        if let consumableSet = job.consumables {
+            _selectedConsumableIDs = State(initialValue: Set(consumableSet.map { $0.id }))
         } else {
             _selectedConsumableIDs = State(initialValue: [])
         }
 
         // Pre-populate linked chemicals
-        if let chemicalSet = job.chemicals as? Set<Chemical> {
-            _selectedChemicalIDs = State(initialValue: Set(chemicalSet.map { $0.objectID }))
+        if let chemicalSet = job.chemicals {
+            _selectedChemicalIDs = State(initialValue: Set(chemicalSet.map { $0.id }))
         } else {
             _selectedChemicalIDs = State(initialValue: [])
+        }
+
+        // Feature #141: Pre-populate linked parts
+        if let partSet = job.parts {
+            _selectedPartIDs = State(initialValue: Set(partSet.map { $0.id }))
+        } else {
+            _selectedPartIDs = State(initialValue: [])
         }
     }
 
     /// Whether the form has the minimum required fields filled
     private var canSave: Bool {
-        !aircraftType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !aircraftType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !selectedSystem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// Resolve selected tool object IDs to Tool managed objects
+    /// Resolve selected tool object IDs to Tool managed objects, sorted by size then name
     private var selectedTools: [Tool] {
         selectedToolIDs.compactMap { objectID in
-            try? viewContext.existingObject(with: objectID) as? Tool
-        }.sorted { ($0.name ?? "") < ($1.name ?? "") }
+            fetchByPersistentID(Tool.self, id: objectID, context: viewContext)
+        }.sortedBySize()
     }
 
     /// Resolve selected consumable object IDs to Consumable managed objects
     private var selectedConsumables: [Consumable] {
         selectedConsumableIDs.compactMap { objectID in
-            try? viewContext.existingObject(with: objectID) as? Consumable
-        }.sorted { ($0.name ?? "") < ($1.name ?? "") }
+            fetchByPersistentID(Consumable.self, id: objectID, context: viewContext)
+        }.sorted { $0.name < $1.name }
     }
 
     /// Resolve selected chemical object IDs to Chemical managed objects
     private var selectedChemicals: [Chemical] {
         selectedChemicalIDs.compactMap { objectID in
-            try? viewContext.existingObject(with: objectID) as? Chemical
-        }.sorted { ($0.name ?? "") < ($1.name ?? "") }
+            fetchByPersistentID(Chemical.self, id: objectID, context: viewContext)
+        }.sorted { $0.name < $1.name }
+    }
+
+    /// Feature #141: Resolve selected part object IDs to Part managed objects
+    private var selectedParts: [Part] {
+        selectedPartIDs.compactMap { objectID in
+            fetchByPersistentID(Part.self, id: objectID, context: viewContext)
+        }.sorted { $0.nomenclature < $1.nomenclature }
     }
 
     var body: some View {
@@ -142,15 +172,17 @@ struct EditJobView: View {
 
                 // MARK: - Aircraft Information
                 Section(header: Text("Aircraft Information")) {
-                    TextField("Aircraft Type (required)", text: $aircraftType)
-                        .font(.body)
-                        .autocorrectionDisabled()
-                        .accessibilityIdentifier("editAircraftTypeField")
-                        .onChange(of: aircraftType) { _, newValue in
-                            if !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                showAircraftTypeRequired = false
-                            }
+                    // Feature #99: Aircraft type autocomplete from previous entries
+                    AircraftTypeAutocompleteView(
+                        aircraftType: $aircraftType,
+                        placeholder: "Aircraft Type (required)",
+                        accessibilityPrefix: "edit"
+                    )
+                    .onChange(of: aircraftType) { _, newValue in
+                        if !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            showAircraftTypeRequired = false
                         }
+                    }
 
                     if showAircraftTypeRequired {
                         Text("Aircraft type is required")
@@ -159,30 +191,36 @@ struct EditJobView: View {
                             .accessibilityIdentifier("editAircraftTypeRequiredLabel")
                     }
 
-                    TextField("Serial Number", text: $aircraftSerialNumber)
-                        .font(.body)
-                        .autocorrectionDisabled()
-                        .accessibilityIdentifier("editSerialNumberField")
+                    // Feature #100: Serial number autocomplete from previous entries
+                    SerialNumberAutocompleteField(
+                        text: $aircraftSerialNumber,
+                        placeholder: "Serial Number",
+                        accessibilityId: "editSerialNumberField"
+                    )
 
-                    TextField("N-Number / Tail Number", text: $nNumber)
-                        .font(.body)
-                        .autocorrectionDisabled()
-                        .accessibilityIdentifier("editNNumberField")
+                    // Feature #101: N-number autocomplete from previous entries
+                    NNumberAutocompleteField(
+                        text: $nNumber,
+                        placeholder: "N-Number / Tail Number",
+                        accessibilityId: "editNNumberField"
+                    )
                 }
 
                 // MARK: - System & Component
                 Section(header: Text("System & Component")) {
-                    Picker("System", selection: $selectedSystem) {
-                        ForEach(systemOptions, id: \.self) { system in
-                            Text(system).tag(system)
-                        }
-                    }
-                    .accessibilityIdentifier("editSystemPicker")
+                    // Feature #102: System field autocomplete from previous entries
+                    SystemAutocompleteField(
+                        text: $selectedSystem,
+                        placeholder: "System (required)",
+                        accessibilityId: "editSystemField"
+                    )
 
-                    TextField("Component", text: $component)
-                        .font(.body)
-                        .autocorrectionDisabled()
-                        .accessibilityIdentifier("editComponentField")
+                    // Feature #103: Component field autocomplete from previous entries
+                    ComponentAutocompleteField(
+                        text: $component,
+                        placeholder: "Component",
+                        accessibilityId: "editComponentField"
+                    )
                 }
 
                 // MARK: - Job Date
@@ -209,12 +247,51 @@ struct EditJobView: View {
                         .accessibilityIdentifier("editTmReferencesField")
                 }
 
-                // MARK: - Notes & Recommendations
+                // MARK: - Notes & Recommendations (Feature #126)
                 Section(header: Text("Notes & Recommendations")) {
-                    TextField("Additional notes, tips, or observations", text: $notes, axis: .vertical)
-                        .lineLimit(3...8)
-                        .font(.body)
-                        .accessibilityIdentifier("editNotesField")
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextField("Enter a note, press return for new item", text: $notes, axis: .vertical)
+                            .lineLimit(3...10)
+                            .font(.body)
+                            .accessibilityIdentifier("editNotesField")
+                            .accessibilityLabel("Notes and Recommendations")
+                            .accessibilityHint("Enter notes separated by line breaks. Each line becomes a numbered item.")
+
+                        // Display notes as numbered list preview when there are multiple lines
+                        if !notes.isEmpty {
+                            let noteLines = notes.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                            if noteLines.count > 1 {
+                                Divider()
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Preview (\(noteLines.count) items)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .accessibilityIdentifier("editNotesPreviewHeader")
+                                    ForEach(Array(noteLines.enumerated()), id: \.offset) { index, line in
+                                        HStack(alignment: .top, spacing: 8) {
+                                            Text("\(index + 1).")
+                                                .font(.caption)
+                                                .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922)) // Industrial blue
+                                                .frame(width: 20, alignment: .trailing)
+                                            Text(line)
+                                                .font(.caption)
+                                                .foregroundColor(.primary)
+                                        }
+                                        .accessibilityElement(children: .combine)
+                                        .accessibilityLabel("Note \(index + 1): \(line)")
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                                .accessibilityIdentifier("editNotesPreviewList")
+                            }
+                        }
+
+                        // Hint text
+                        Text("Press return to add multiple notes")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .accessibilityIdentifier("editNotesHintText")
+                    }
                 }
 
                 // MARK: - Recommendations
@@ -228,7 +305,7 @@ struct EditJobView: View {
                 // MARK: - Tools Used
                 Section("Tools Used") {
                     if selectedTools.isEmpty {
-                        Button(action: { showingToolPicker = true }) {
+                        Button(action: { activeSheet = .toolPicker }) {
                             HStack {
                                 Image(systemName: "wrench.and.screwdriver")
                                     .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
@@ -242,10 +319,10 @@ struct EditJobView: View {
                         }
                         .accessibilityIdentifier("editAddToolsFromGarageButton")
                     } else {
-                        ForEach(selectedTools, id: \.objectID) { tool in
+                        ForEach(selectedTools, id: \.id) { tool in
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(tool.name ?? "Unnamed Tool")
+                                    Text(tool.name)
                                         .font(.body)
                                     Text(ownershipLabel(for: tool))
                                         .font(.caption)
@@ -253,7 +330,7 @@ struct EditJobView: View {
                                 }
                                 Spacer()
                                 Button(action: {
-                                    selectedToolIDs.remove(tool.objectID)
+                                    selectedToolIDs.remove(tool.id)
                                 }) {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundColor(.secondary)
@@ -262,7 +339,7 @@ struct EditJobView: View {
                             }
                         }
 
-                        Button(action: { showingToolPicker = true }) {
+                        Button(action: { activeSheet = .toolPicker }) {
                             HStack {
                                 Image(systemName: "plus.circle")
                                     .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
@@ -277,7 +354,7 @@ struct EditJobView: View {
                 // MARK: - Consumables Used
                 Section("Consumables Used") {
                     if selectedConsumables.isEmpty {
-                        Button(action: { showingConsumablePicker = true }) {
+                        Button(action: { activeSheet = .consumablePicker }) {
                             HStack {
                                 Image(systemName: "bolt.fill")
                                     .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
@@ -291,10 +368,10 @@ struct EditJobView: View {
                         }
                         .accessibilityIdentifier("editAddConsumablesFromGarageButton")
                     } else {
-                        ForEach(selectedConsumables, id: \.objectID) { consumable in
+                        ForEach(selectedConsumables, id: \.id) { consumable in
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(consumable.name ?? "Unnamed Consumable")
+                                    Text(consumable.name)
                                         .font(.body)
                                     Text(consumableCategoryLabel(for: consumable))
                                         .font(.caption)
@@ -302,7 +379,7 @@ struct EditJobView: View {
                                 }
                                 Spacer()
                                 Button(action: {
-                                    selectedConsumableIDs.remove(consumable.objectID)
+                                    selectedConsumableIDs.remove(consumable.id)
                                 }) {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundColor(.secondary)
@@ -311,7 +388,7 @@ struct EditJobView: View {
                             }
                         }
 
-                        Button(action: { showingConsumablePicker = true }) {
+                        Button(action: { activeSheet = .consumablePicker }) {
                             HStack {
                                 Image(systemName: "plus.circle")
                                     .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
@@ -326,7 +403,7 @@ struct EditJobView: View {
                 // MARK: - Chemicals Used
                 Section("Chemicals Used") {
                     if selectedChemicals.isEmpty {
-                        Button(action: { showingChemicalPicker = true }) {
+                        Button(action: { activeSheet = .chemicalPicker }) {
                             HStack {
                                 Image(systemName: "drop.fill")
                                     .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
@@ -340,10 +417,10 @@ struct EditJobView: View {
                         }
                         .accessibilityIdentifier("editAddChemicalsFromGarageButton")
                     } else {
-                        ForEach(selectedChemicals, id: \.objectID) { chemical in
+                        ForEach(selectedChemicals, id: \.id) { chemical in
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(chemical.name ?? "Unnamed Chemical")
+                                    Text(chemical.name)
                                         .font(.body)
                                     Text(chemicalCategoryLabel(for: chemical))
                                         .font(.caption)
@@ -351,7 +428,7 @@ struct EditJobView: View {
                                 }
                                 Spacer()
                                 Button(action: {
-                                    selectedChemicalIDs.remove(chemical.objectID)
+                                    selectedChemicalIDs.remove(chemical.id)
                                 }) {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundColor(.secondary)
@@ -360,7 +437,7 @@ struct EditJobView: View {
                             }
                         }
 
-                        Button(action: { showingChemicalPicker = true }) {
+                        Button(action: { activeSheet = .chemicalPicker }) {
                             HStack {
                                 Image(systemName: "plus.circle")
                                     .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
@@ -369,6 +446,63 @@ struct EditJobView: View {
                             }
                         }
                         .accessibilityIdentifier("editAddMoreChemicalsButton")
+                    }
+                }
+
+                // MARK: - Parts Used (Feature #141)
+                Section("Parts Used") {
+                    if selectedParts.isEmpty {
+                        Button(action: { activeSheet = .partEntry }) {
+                            HStack {
+                                Image(systemName: "gearshape.2.fill")
+                                    .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
+                                Text("Add Part")
+                                    .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption)
+                            }
+                        }
+                        .accessibilityIdentifier("editAddPartButton")
+                    } else {
+                        ForEach(selectedParts, id: \.id) { part in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(part.nomenclature)
+                                        .font(.body)
+                                    HStack(spacing: 8) {
+                                        Text("P/N: \(part.partNumber)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        if part.quantity > 1 {
+                                            Text("Qty: \(part.quantity)")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                }
+                                Spacer()
+                                Button(action: {
+                                    selectedPartIDs.remove(part.id)
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Remove \(part.nomenclature)")
+                            }
+                        }
+
+                        Button(action: { activeSheet = .partEntry }) {
+                            HStack {
+                                Image(systemName: "plus.circle")
+                                    .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
+                                Text("Add More Parts")
+                                    .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
+                            }
+                        }
+                        .accessibilityIdentifier("editAddMorePartsButton")
                     }
                 }
 
@@ -418,24 +552,42 @@ struct EditJobView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingToolPicker) {
-                GarageToolPickerView(selectedToolIDs: $selectedToolIDs)
-                    .environment(\.managedObjectContext, viewContext)
-            }
-            .sheet(isPresented: $showingConsumablePicker) {
-                GarageConsumablePickerView(selectedConsumableIDs: $selectedConsumableIDs)
-                    .environment(\.managedObjectContext, viewContext)
-            }
-            .sheet(isPresented: $showingChemicalPicker) {
-                GarageChemicalPickerView(selectedChemicalIDs: $selectedChemicalIDs)
-                    .environment(\.managedObjectContext, viewContext)
+            // Single .sheet(item:) to avoid SwiftUI's multiple-sheet binding bug
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .toolPicker:
+                    GarageToolPickerView(selectedToolIDs: $selectedToolIDs)
+                        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                case .consumablePicker:
+                    GarageConsumablePickerView(selectedConsumableIDs: $selectedConsumableIDs)
+                        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                case .chemicalPicker:
+                    GarageChemicalPickerView(selectedChemicalIDs: $selectedChemicalIDs)
+                        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                case .partEntry:
+                    PartEntryView(selectedPartIDs: $selectedPartIDs)
+                        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                case .addToGaragePrompt:
+                    AddToGaragePromptView(
+                        tools: onTheFlyTools,
+                        consumables: onTheFlyConsumables,
+                        chemicals: onTheFlyChemicals,
+                        onDismiss: {
+                            onTheFlyTools = []
+                            onTheFlyConsumables = []
+                            onTheFlyChemicals = []
+                            showingSaveSuccess = true
+                        }
+                    )
+                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                }
             }
             .alert("Changes Saved!", isPresented: $showingSaveSuccess) {
                 Button("OK") {
                     dismiss()
                 }
             } message: {
-                Text("Job record for \(job.aircraftType ?? "unknown") has been updated.")
+                Text("Job record for \(job.aircraftType) has been updated.")
             }
             .alert("Error", isPresented: $showingError) {
                 Button("OK") { }
@@ -452,6 +604,7 @@ struct EditJobView: View {
         case "personal": return "Personal"
         case "shop": return "Shop"
         case "borrowed": return "Borrowed"
+        case "imported": return "Imported"
         default: return "Personal"
         }
     }
@@ -484,10 +637,10 @@ struct EditJobView: View {
     /// This snapshot is stored as binary data in a JobRevision entity.
     private func createRevisionSnapshot() -> Data? {
         var snapshot: [String: Any] = [:]
-        snapshot["aircraftType"] = job.aircraftType ?? ""
+        snapshot["aircraftType"] = job.aircraftType
         snapshot["aircraftSerialNumber"] = job.aircraftSerialNumber ?? ""
         snapshot["nNumber"] = job.nNumber ?? ""
-        snapshot["system"] = job.system ?? ""
+        snapshot["system"] = job.system
         snapshot["component"] = job.component ?? ""
         snapshot["taskDescription"] = job.taskDescription ?? ""
         snapshot["tmReferences"] = job.tmReferences ?? ""
@@ -495,35 +648,50 @@ struct EditJobView: View {
         snapshot["recommendations"] = job.recommendations ?? ""
 
         // Format job date as ISO string for JSON serialization
-        if let jobDate = job.jobDate {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .long
-            formatter.timeStyle = .none
-            snapshot["jobDate"] = formatter.string(from: jobDate)
-        }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        formatter.timeStyle = .none
+        snapshot["jobDate"] = formatter.string(from: job.jobDate)
 
         // Snapshot linked tools
-        if let toolSet = job.tools as? Set<Tool> {
+        if let toolSet = job.tools {
             let toolsArray = toolSet.map { tool -> [String: String] in
-                ["name": tool.name ?? "Unknown", "ownershipType": tool.ownershipType ?? "personal"]
+                ["name": tool.name, "ownershipType": tool.ownershipType]
             }
             snapshot["tools"] = toolsArray
         }
 
         // Snapshot linked consumables
-        if let consumableSet = job.consumables as? Set<Consumable> {
+        if let consumableSet = job.consumables {
             let consumablesArray = consumableSet.map { c -> [String: String] in
-                ["name": c.name ?? "Unknown", "category": c.category ?? "other"]
+                ["name": c.name, "category": c.category]
             }
             snapshot["consumables"] = consumablesArray
         }
 
         // Snapshot linked chemicals
-        if let chemicalSet = job.chemicals as? Set<Chemical> {
+        if let chemicalSet = job.chemicals {
             let chemicalsArray = chemicalSet.map { c -> [String: String] in
-                ["name": c.name ?? "Unknown", "category": c.category ?? "other"]
+                ["name": c.name, "category": c.category]
             }
             snapshot["chemicals"] = chemicalsArray
+        }
+
+        // Feature #141: Snapshot linked parts
+        if let partSet = job.parts {
+            let partsArray = partSet.map { p -> [String: Any] in
+                var dict: [String: Any] = [
+                    "nomenclature": p.nomenclature,
+                    "partNumber": p.partNumber,
+                    "quantity": Int(p.quantity)
+                ]
+                if let alt = p.alternatePartNumber, !alt.isEmpty { dict["alternatePartNumber"] = alt }
+                if let nsn = p.nsn, !nsn.isEmpty { dict["nsn"] = nsn }
+                if let uom = p.unitOfMeasure, !uom.isEmpty { dict["unitOfMeasure"] = uom }
+                if let notes = p.notes, !notes.isEmpty { dict["notes"] = notes }
+                return dict
+            }
+            snapshot["parts"] = partsArray
         }
 
         return try? JSONSerialization.data(withJSONObject: snapshot, options: [.sortedKeys])
@@ -531,14 +699,15 @@ struct EditJobView: View {
 
     /// Creates a JobRevision entity preserving the current state before the edit is applied.
     private func createRevision() {
-        let revision = JobRevision(context: viewContext)
-        revision.id = UUID()
-        revision.versionNumber = job.currentVersion
-        revision.editedAt = Date()
-        revision.snapshotData = createRevisionSnapshot()
+        let revision = FROJobRevision(
+            versionNumber: job.currentVersion,
+            snapshotData: createRevisionSnapshot()
+        )
         revision.jobRecord = job
-        job.addToRevisions(revision)
-        print("EditJobView: Created revision v\(job.currentVersion) for job '\(job.aircraftType ?? "unknown")'")
+        viewContext.insert(revision)
+        if job.revisions == nil { job.revisions = [] }
+        job.revisions?.append(revision)
+        print("EditJobView: Created revision v\(job.currentVersion) for job '\(job.aircraftType)'")
     }
 
     // MARK: - Save Logic
@@ -561,7 +730,7 @@ struct EditJobView: View {
 
         // Update all fields on the existing job record
         job.aircraftType = trimmedAircraftType
-        job.system = selectedSystem
+        job.system = selectedSystem.trimmingCharacters(in: .whitespacesAndNewlines)
         job.jobDate = jobDate
         job.updatedAt = Date()
 
@@ -587,48 +756,79 @@ struct EditJobView: View {
         let trimmedRecs = recommendations.trimmingCharacters(in: .whitespacesAndNewlines)
         job.recommendations = trimmedRecs.isEmpty ? nil : trimmedRecs
 
-        // Update tool links: remove old, add new
-        if let existingTools = job.tools as? Set<Tool> {
-            for tool in existingTools {
-                job.removeFromTools(tool)
-            }
-        }
+        // Feature #96: Track on-the-fly items (isInGarage = false) for post-save prompt
+        var newOnTheFlyTools: [FROTool] = []
+        var newOnTheFlyConsumables: [FROConsumable] = []
+        var newOnTheFlyChemicals: [FROChemical] = []
+
+        // Update tool links: replace with new selection
+        var updatedTools: [FROTool] = []
         for toolID in selectedToolIDs {
-            if let tool = try? viewContext.existingObject(with: toolID) as? Tool {
-                job.addToTools(tool)
+            if let tool = fetchByPersistentID(FROTool.self, id: toolID, context: viewContext) {
+                updatedTools.append(tool)
+                if !tool.isInGarage {
+                    newOnTheFlyTools.append(tool)
+                    print("EditJobView: Detected on-the-fly tool '\(tool.name)'")
+                }
             }
         }
+        job.tools = updatedTools
 
-        // Update consumable links: remove old, add new
-        if let existingConsumables = job.consumables as? Set<Consumable> {
-            for consumable in existingConsumables {
-                job.removeFromConsumables(consumable)
-            }
-        }
+        // Update consumable links: replace with new selection
+        var updatedConsumables: [FROConsumable] = []
         for consumableID in selectedConsumableIDs {
-            if let consumable = try? viewContext.existingObject(with: consumableID) as? Consumable {
-                job.addToConsumables(consumable)
+            if let consumable = fetchByPersistentID(FROConsumable.self, id: consumableID, context: viewContext) {
+                updatedConsumables.append(consumable)
+                if !consumable.isInGarage {
+                    newOnTheFlyConsumables.append(consumable)
+                    print("EditJobView: Detected on-the-fly consumable '\(consumable.name)'")
+                }
             }
         }
+        job.consumables = updatedConsumables
 
-        // Update chemical links: remove old, add new
-        if let existingChemicals = job.chemicals as? Set<Chemical> {
-            for chemical in existingChemicals {
-                job.removeFromChemicals(chemical)
-            }
-        }
+        // Update chemical links: replace with new selection
+        var updatedChemicals: [FROChemical] = []
         for chemicalID in selectedChemicalIDs {
-            if let chemical = try? viewContext.existingObject(with: chemicalID) as? Chemical {
-                job.addToChemicals(chemical)
+            if let chemical = fetchByPersistentID(FROChemical.self, id: chemicalID, context: viewContext) {
+                updatedChemicals.append(chemical)
+                if !chemical.isInGarage {
+                    newOnTheFlyChemicals.append(chemical)
+                    print("EditJobView: Detected on-the-fly chemical '\(chemical.name)'")
+                }
             }
         }
+        job.chemicals = updatedChemicals
+
+        // Feature #141: Update part links: replace with new selection
+        var updatedParts: [FROPart] = []
+        for partID in selectedPartIDs {
+            if let part = fetchByPersistentID(FROPart.self, id: partID, context: viewContext) {
+                updatedParts.append(part)
+                print("EditJobView: Linked part '\(part.nomenclature)' P/N: \(part.partNumber)")
+            }
+        }
+        job.parts = updatedParts
 
         do {
             try viewContext.save()
             print("EditJobView: Updated job record for '\(trimmedAircraftType)' successfully")
-            showingSaveSuccess = true
+
+            // Feature #96: Check if there are on-the-fly items to prompt about
+            let hasOnTheFlyItems = !newOnTheFlyTools.isEmpty || !newOnTheFlyConsumables.isEmpty || !newOnTheFlyChemicals.isEmpty
+
+            if hasOnTheFlyItems {
+                // Store on-the-fly items and show the prompt
+                onTheFlyTools = newOnTheFlyTools
+                onTheFlyConsumables = newOnTheFlyConsumables
+                onTheFlyChemicals = newOnTheFlyChemicals
+                print("EditJobView: Showing Add to Garage prompt for \(newOnTheFlyTools.count) tools, \(newOnTheFlyConsumables.count) consumables, \(newOnTheFlyChemicals.count) chemicals")
+                activeSheet = .addToGaragePrompt
+            } else {
+                // No on-the-fly items, show regular success alert
+                showingSaveSuccess = true
+            }
         } catch {
-            viewContext.rollback()
             print("EditJobView: Save failed, context rolled back - \(error)")
             errorMessage = "Failed to save changes: \(error.localizedDescription)"
             showingError = true

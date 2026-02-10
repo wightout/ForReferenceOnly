@@ -3,7 +3,7 @@ import SwiftUI
 /// Main content view with tab-based navigation.
 /// Provides the 4 main tabs: Dashboard, New Job, Garage, Search.
 struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.modelContext) private var viewContext
 
     /// Selected tab index. Supports launch argument "-startTab" for testing.
     @State private var selectedTab: Int
@@ -38,7 +38,7 @@ struct ContentView: View {
                 .accessibilityLabel("Dashboard")
                 .accessibilityHint("View recent jobs and quick stats")
 
-            NewJobView()
+            NewJobView(selectedTab: $selectedTab)
                 .tabItem {
                     Label("New Job", systemImage: "plus.circle.fill")
                 }
@@ -68,5 +68,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
 }

@@ -1,5 +1,6 @@
 import SwiftUI
-import CoreData
+import Foundation
+import SwiftData
 
 /// View displayed after voice transcription completes, showing identified candidate
 /// tools, consumables, and chemicals from the transcription text.
@@ -8,11 +9,11 @@ struct CandidateReviewView: View {
     let candidates: [TranscriptionCandidate]
 
     /// Callback with selected tool IDs, consumable IDs, chemical IDs, and the (possibly edited) transcribed text
-    var onConfirm: (Set<NSManagedObjectID>, Set<NSManagedObjectID>, Set<NSManagedObjectID>, String) -> Void
+    var onConfirm: (Set<UUID>, Set<UUID>, Set<UUID>, String) -> Void
 
     @Binding var isPresented: Bool
 
-    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.modelContext) private var viewContext
 
     // Editable transcription text
     @State private var editableText: String
@@ -22,9 +23,9 @@ struct CandidateReviewView: View {
     @State private var selectedCandidateIDs: Set<UUID> = []
 
     // Manually added items from Garage (not from transcription matching)
-    @State private var manuallyAddedToolIDs: Set<NSManagedObjectID> = []
-    @State private var manuallyAddedConsumableIDs: Set<NSManagedObjectID> = []
-    @State private var manuallyAddedChemicalIDs: Set<NSManagedObjectID> = []
+    @State private var manuallyAddedToolIDs: Set<UUID> = []
+    @State private var manuallyAddedConsumableIDs: Set<UUID> = []
+    @State private var manuallyAddedChemicalIDs: Set<UUID> = []
 
     // Garage picker sheets
     @State private var showingToolPicker = false
@@ -32,7 +33,7 @@ struct CandidateReviewView: View {
     @State private var showingChemicalPicker = false
 
     init(transcribedText: String, candidates: [TranscriptionCandidate],
-         onConfirm: @escaping (Set<NSManagedObjectID>, Set<NSManagedObjectID>, Set<NSManagedObjectID>, String) -> Void,
+         onConfirm: @escaping (Set<UUID>, Set<UUID>, Set<UUID>, String) -> Void,
          isPresented: Binding<Bool>) {
         self.candidates = candidates
         self.onConfirm = onConfirm
@@ -57,23 +58,23 @@ struct CandidateReviewView: View {
         candidates.filter { $0.confidence == .low }
     }
 
-    // Resolve manually added items to display names
+    // Resolve manually added items to display names, sorted by size then name
     private var manuallyAddedTools: [Tool] {
         manuallyAddedToolIDs.compactMap { id in
-            try? viewContext.existingObject(with: id) as? Tool
-        }.sorted { ($0.name ?? "") < ($1.name ?? "") }
+            fetchByPersistentID(Tool.self, id: id, context: viewContext)
+        }.sortedBySize()
     }
 
     private var manuallyAddedConsumables: [Consumable] {
         manuallyAddedConsumableIDs.compactMap { id in
-            try? viewContext.existingObject(with: id) as? Consumable
-        }.sorted { ($0.name ?? "") < ($1.name ?? "") }
+            fetchByPersistentID(Consumable.self, id: id, context: viewContext)
+        }.sorted { $0.name < $1.name }
     }
 
     private var manuallyAddedChemicals: [Chemical] {
         manuallyAddedChemicalIDs.compactMap { id in
-            try? viewContext.existingObject(with: id) as? Chemical
-        }.sorted { ($0.name ?? "") < ($1.name ?? "") }
+            fetchByPersistentID(Chemical.self, id: id, context: viewContext)
+        }.sorted { $0.name < $1.name }
     }
 
     /// Total number of selected items (auto-detected + manually added)
@@ -160,15 +161,15 @@ struct CandidateReviewView: View {
             }
             .sheet(isPresented: $showingToolPicker) {
                 GarageToolPickerView(selectedToolIDs: $manuallyAddedToolIDs)
-                    .environment(\.managedObjectContext, viewContext)
+                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
             .sheet(isPresented: $showingConsumablePicker) {
                 GarageConsumablePickerView(selectedConsumableIDs: $manuallyAddedConsumableIDs)
-                    .environment(\.managedObjectContext, viewContext)
+                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
             .sheet(isPresented: $showingChemicalPicker) {
                 GarageChemicalPickerView(selectedChemicalIDs: $manuallyAddedChemicalIDs)
-                    .environment(\.managedObjectContext, viewContext)
+                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
         }
     }
@@ -387,32 +388,32 @@ struct CandidateReviewView: View {
             .accessibilityIdentifier("manuallyAddedHeader")
 
             // Manually added tools
-            ForEach(manuallyAddedTools, id: \.objectID) { tool in
+            ForEach(manuallyAddedTools, id: \.id) { tool in
                 manuallyAddedRow(
-                    name: tool.name ?? "Unnamed Tool",
+                    name: tool.name,
                     typeBadge: "Tool",
                     color: Color(red: 0.145, green: 0.388, blue: 0.922),
-                    onRemove: { manuallyAddedToolIDs.remove(tool.objectID) }
+                    onRemove: { manuallyAddedToolIDs.remove(tool.id) }
                 )
             }
 
             // Manually added consumables
-            ForEach(manuallyAddedConsumables, id: \.objectID) { consumable in
+            ForEach(manuallyAddedConsumables, id: \.id) { consumable in
                 manuallyAddedRow(
-                    name: consumable.name ?? "Unnamed Consumable",
+                    name: consumable.name,
                     typeBadge: "Consumable",
                     color: Color(red: 0.976, green: 0.451, blue: 0.086),
-                    onRemove: { manuallyAddedConsumableIDs.remove(consumable.objectID) }
+                    onRemove: { manuallyAddedConsumableIDs.remove(consumable.id) }
                 )
             }
 
             // Manually added chemicals
-            ForEach(manuallyAddedChemicals, id: \.objectID) { chemical in
+            ForEach(manuallyAddedChemicals, id: \.id) { chemical in
                 manuallyAddedRow(
-                    name: chemical.name ?? "Unnamed Chemical",
+                    name: chemical.name,
                     typeBadge: "Chemical",
                     color: Color(red: 0.306, green: 0.694, blue: 0.482),
-                    onRemove: { manuallyAddedChemicalIDs.remove(chemical.objectID) }
+                    onRemove: { manuallyAddedChemicalIDs.remove(chemical.id) }
                 )
             }
         }
@@ -573,16 +574,16 @@ struct CandidateReviewView: View {
             // Confirm button
             Button(action: {
                 let selectedSet = selectedCandidateIDs
-                var toolIDs = Set<NSManagedObjectID>()
-                var consumableIDs = Set<NSManagedObjectID>()
-                var chemicalIDs = Set<NSManagedObjectID>()
+                var toolIDs = Set<UUID>()
+                var consumableIDs = Set<UUID>()
+                var chemicalIDs = Set<UUID>()
 
                 // Add auto-detected selected candidates
                 for candidate in candidates where selectedSet.contains(candidate.id) {
                     switch candidate.type {
-                    case .tool: toolIDs.insert(candidate.objectID)
-                    case .consumable: consumableIDs.insert(candidate.objectID)
-                    case .chemical: chemicalIDs.insert(candidate.objectID)
+                    case .tool: toolIDs.insert(candidate.id)
+                    case .consumable: consumableIDs.insert(candidate.id)
+                    case .chemical: chemicalIDs.insert(candidate.id)
                     }
                 }
 

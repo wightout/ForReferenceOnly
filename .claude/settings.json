@@ -1,0 +1,36 @@
+{
+  "env": {
+    "CLAUDE_CODE_MAX_TURNS": "200",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Edit",
+      "MultiEdit",
+      "Read",
+      "Write",
+      "Bash(xcodebuild *)",
+      "Bash(swift *)",
+      "Bash(swiftc *)",
+      "Bash(git *)",
+      "Bash(xcrun *)",
+      "Bash(xcode-select *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(cat *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(rm *)",
+      "Bash(diff *)",
+      "Bash(pod *)",
+      "Bash(open *)",
+      "Bash(wc *)",
+      "Bash(sort *)",
+      "Bash(head *)",
+      "Bash(tail *)"
+    ],
+    "defaultMode": "bypassPermissions"
+  }
+}

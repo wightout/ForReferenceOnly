@@ -1,13 +1,16 @@
-import CoreData
+import Foundation
+import SwiftData
 
-/// SearchService provides universal and filtered search across all Core Data entities.
-/// All queries execute real NSFetchRequest operations against the SQLite store.
+/// SearchService provides universal and filtered search across all SwiftData entities.
 /// Includes fuzzy/typo-tolerant matching using Levenshtein distance.
+@MainActor
 class SearchService {
 
     // MARK: - Properties
 
-    private let persistenceController: PersistenceController
+    private var modelContext: ModelContext {
+        SharedModelContainer.shared.mainContext
+    }
 
     /// Maximum Levenshtein distance for fuzzy matching (based on query length)
     /// Shorter queries need tighter matching; longer queries can tolerate more errors
@@ -16,18 +19,6 @@ class SearchService {
         if length <= 3 { return 1 }         // Short words: 1 typo max
         if length <= 6 { return 2 }         // Medium words: 2 typos max
         return 3                             // Long words: 3 typos max
-    }
-
-    /// The managed object context used for all operations
-    var viewContext: NSManagedObjectContext {
-        persistenceController.viewContext
-    }
-
-    // MARK: - Initialization
-
-    /// Initialize with a persistence controller (defaults to shared singleton)
-    init(persistenceController: PersistenceController = .shared) {
-        self.persistenceController = persistenceController
     }
 
     // MARK: - Fuzzy Matching Utilities
@@ -157,31 +148,33 @@ class SearchService {
     // MARK: - Universal Search
 
     /// Searches across all job record fields for the given query string.
-    /// Uses CONTAINS[cd] for case-insensitive, diacritic-insensitive matching.
+    /// Fetches all records and filters in-memory for multi-field OR matching.
     /// - Parameter query: The search text
     /// - Returns: Array of matching JobRecord objects sorted by jobDate descending
-    func searchJobRecords(query: String) -> [JobRecord] {
-        let request = NSFetchRequest<JobRecord>(entityName: "JobRecord")
+    func searchJobRecords(query: String) -> [FROJob] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
 
-        // Search across multiple fields with OR predicates
-        let predicates: [NSPredicate] = [
-            NSPredicate(format: "aircraftType CONTAINS[cd] %@", trimmed),
-            NSPredicate(format: "aircraftSerialNumber CONTAINS[cd] %@", trimmed),
-            NSPredicate(format: "nNumber CONTAINS[cd] %@", trimmed),
-            NSPredicate(format: "system CONTAINS[cd] %@", trimmed),
-            NSPredicate(format: "component CONTAINS[cd] %@", trimmed),
-            NSPredicate(format: "taskDescription CONTAINS[cd] %@", trimmed),
-            NSPredicate(format: "tmReferences CONTAINS[cd] %@", trimmed),
-            NSPredicate(format: "notes CONTAINS[cd] %@", trimmed),
-            NSPredicate(format: "recommendations CONTAINS[cd] %@", trimmed)
-        ]
-        request.predicate = NSCompoundPredicate(orPredicateWithSubpredicates: predicates)
-        request.sortDescriptors = [NSSortDescriptor(key: "jobDate", ascending: false)]
+        let descriptor = FetchDescriptor<FROJob>(
+            sortBy: [SortDescriptor(\.jobDate, order: .reverse)]
+        )
 
         do {
-            let results = try viewContext.fetch(request)
+            let allRecords = try modelContext.fetch(descriptor)
+            let lowerQuery = trimmed.lowercased()
+
+            let results = allRecords.filter { record in
+                record.aircraftType.localizedCaseInsensitiveContains(lowerQuery) ||
+                (record.aircraftSerialNumber?.localizedCaseInsensitiveContains(lowerQuery) ?? false) ||
+                (record.nNumber?.localizedCaseInsensitiveContains(lowerQuery) ?? false) ||
+                record.system.localizedCaseInsensitiveContains(lowerQuery) ||
+                (record.component?.localizedCaseInsensitiveContains(lowerQuery) ?? false) ||
+                (record.taskDescription?.localizedCaseInsensitiveContains(lowerQuery) ?? false) ||
+                (record.tmReferences?.localizedCaseInsensitiveContains(lowerQuery) ?? false) ||
+                (record.notes?.localizedCaseInsensitiveContains(lowerQuery) ?? false) ||
+                (record.recommendations?.localizedCaseInsensitiveContains(lowerQuery) ?? false)
+            }
+
             print("SearchService: Found \(results.count) job records for query '\(trimmed)'")
             return results
         } catch {
@@ -195,13 +188,15 @@ class SearchService {
     /// Searches job records filtered by aircraft type.
     /// - Parameter aircraftType: The aircraft type to filter by
     /// - Returns: Array of matching JobRecord objects
-    func searchByAircraftType(_ aircraftType: String) -> [JobRecord] {
-        let request = NSFetchRequest<JobRecord>(entityName: "JobRecord")
-        request.predicate = NSPredicate(format: "aircraftType CONTAINS[cd] %@", aircraftType)
-        request.sortDescriptors = [NSSortDescriptor(key: "jobDate", ascending: false)]
+    func searchByAircraftType(_ aircraftType: String) -> [FROJob] {
+        let searchTerm = aircraftType
+        let descriptor = FetchDescriptor<FROJob>(
+            sortBy: [SortDescriptor(\.jobDate, order: .reverse)]
+        )
 
         do {
-            return try viewContext.fetch(request)
+            let all = try modelContext.fetch(descriptor)
+            return all.filter { $0.aircraftType.localizedCaseInsensitiveContains(searchTerm) }
         } catch {
             print("SearchService: Failed to search by aircraft type - \(error)")
             return []
@@ -211,13 +206,15 @@ class SearchService {
     /// Searches job records filtered by system.
     /// - Parameter system: The system to filter by
     /// - Returns: Array of matching JobRecord objects
-    func searchBySystem(_ system: String) -> [JobRecord] {
-        let request = NSFetchRequest<JobRecord>(entityName: "JobRecord")
-        request.predicate = NSPredicate(format: "system CONTAINS[cd] %@", system)
-        request.sortDescriptors = [NSSortDescriptor(key: "jobDate", ascending: false)]
+    func searchBySystem(_ system: String) -> [FROJob] {
+        let searchTerm = system
+        let descriptor = FetchDescriptor<FROJob>(
+            sortBy: [SortDescriptor(\.jobDate, order: .reverse)]
+        )
 
         do {
-            return try viewContext.fetch(request)
+            let all = try modelContext.fetch(descriptor)
+            return all.filter { $0.system.localizedCaseInsensitiveContains(searchTerm) }
         } catch {
             print("SearchService: Failed to search by system - \(error)")
             return []
@@ -227,13 +224,15 @@ class SearchService {
     /// Searches job records filtered by TM reference.
     /// - Parameter tmReference: The TM reference to search for
     /// - Returns: Array of matching JobRecord objects
-    func searchByTMReference(_ tmReference: String) -> [JobRecord] {
-        let request = NSFetchRequest<JobRecord>(entityName: "JobRecord")
-        request.predicate = NSPredicate(format: "tmReferences CONTAINS[cd] %@", tmReference)
-        request.sortDescriptors = [NSSortDescriptor(key: "jobDate", ascending: false)]
+    func searchByTMReference(_ tmReference: String) -> [FROJob] {
+        let searchTerm = tmReference
+        let descriptor = FetchDescriptor<FROJob>(
+            sortBy: [SortDescriptor(\.jobDate, order: .reverse)]
+        )
 
         do {
-            return try viewContext.fetch(request)
+            let all = try modelContext.fetch(descriptor)
+            return all.filter { $0.tmReferences?.localizedCaseInsensitiveContains(searchTerm) ?? false }
         } catch {
             print("SearchService: Failed to search by TM reference - \(error)")
             return []
@@ -243,54 +242,38 @@ class SearchService {
     // MARK: - Tool Search
 
     /// Searches tools by name or alias (case-insensitive, contains match).
-    /// Name is searched via NSPredicate; aliases (Transformable) are filtered in-memory.
     /// - Parameter query: The search text
     /// - Returns: Array of matching Tool objects (deduplicated, sorted by name)
-    func searchTools(query: String) -> [Tool] {
+    func searchTools(query: String) -> [FROTool] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
 
-        // First, fetch tools matching by name
-        let nameRequest = NSFetchRequest<Tool>(entityName: "Tool")
-        nameRequest.predicate = NSPredicate(format: "name CONTAINS[cd] %@", trimmed)
-        nameRequest.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+        let descriptor = FetchDescriptor<FROTool>(
+            sortBy: [SortDescriptor(\.name)]
+        )
 
-        var nameMatches: [Tool] = []
         do {
-            nameMatches = try viewContext.fetch(nameRequest)
-        } catch {
-            print("SearchService: Failed to search tools by name - \(error)")
-        }
-
-        // Also fetch all tools to check aliases (Transformable can't be queried via NSPredicate)
-        let allRequest = NSFetchRequest<Tool>(entityName: "Tool")
-        allRequest.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
-
-        var aliasMatches: [Tool] = []
-        do {
-            let allTools = try viewContext.fetch(allRequest)
+            let allTools = try modelContext.fetch(descriptor)
             let lowerQuery = trimmed.lowercased()
-            aliasMatches = allTools.filter { tool in
-                guard let aliases = tool.aliases as? [String] else { return false }
-                return aliases.contains { $0.lowercased().contains(lowerQuery) }
+
+            let results = allTools.filter { tool in
+                // Check name match
+                if tool.name.localizedCaseInsensitiveContains(lowerQuery) {
+                    return true
+                }
+                // Check alias match
+                if let aliases = tool.aliases {
+                    return aliases.contains { $0.lowercased().contains(lowerQuery) }
+                }
+                return false
             }
+
+            print("SearchService: Found \(results.count) tools for query '\(trimmed)'")
+            return results
         } catch {
-            print("SearchService: Failed to search tools by alias - \(error)")
+            print("SearchService: Failed to search tools - \(error)")
+            return []
         }
-
-        // Combine and deduplicate
-        var seen = Set<NSManagedObjectID>()
-        var results: [Tool] = []
-        for tool in nameMatches + aliasMatches {
-            if seen.insert(tool.objectID).inserted {
-                results.append(tool)
-            }
-        }
-
-        // Sort by name
-        results.sort { ($0.name ?? "") < ($1.name ?? "") }
-        print("SearchService: Found \(results.count) tools for query '\(trimmed)' (name: \(nameMatches.count), alias: \(aliasMatches.count))")
-        return results
     }
 
     // MARK: - Consumable Search
@@ -298,13 +281,15 @@ class SearchService {
     /// Searches consumables by name (case-insensitive, contains match).
     /// - Parameter query: The search text
     /// - Returns: Array of matching Consumable objects
-    func searchConsumables(query: String) -> [Consumable] {
-        let request = NSFetchRequest<Consumable>(entityName: "Consumable")
-        request.predicate = NSPredicate(format: "name CONTAINS[cd] %@", query)
-        request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+    func searchConsumables(query: String) -> [FROConsumable] {
+        let searchTerm = query
+        let descriptor = FetchDescriptor<FROConsumable>(
+            sortBy: [SortDescriptor(\.name)]
+        )
 
         do {
-            return try viewContext.fetch(request)
+            let all = try modelContext.fetch(descriptor)
+            return all.filter { $0.name.localizedCaseInsensitiveContains(searchTerm) }
         } catch {
             print("SearchService: Failed to search consumables - \(error)")
             return []
@@ -316,13 +301,15 @@ class SearchService {
     /// Searches chemicals by name (case-insensitive, contains match).
     /// - Parameter query: The search text
     /// - Returns: Array of matching Chemical objects
-    func searchChemicals(query: String) -> [Chemical] {
-        let request = NSFetchRequest<Chemical>(entityName: "Chemical")
-        request.predicate = NSPredicate(format: "name CONTAINS[cd] %@", query)
-        request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+    func searchChemicals(query: String) -> [FROChemical] {
+        let searchTerm = query
+        let descriptor = FetchDescriptor<FROChemical>(
+            sortBy: [SortDescriptor(\.name)]
+        )
 
         do {
-            return try viewContext.fetch(request)
+            let all = try modelContext.fetch(descriptor)
+            return all.filter { $0.name.localizedCaseInsensitiveContains(searchTerm) }
         } catch {
             print("SearchService: Failed to search chemicals - \(error)")
             return []

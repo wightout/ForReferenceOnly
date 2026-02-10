@@ -1,22 +1,28 @@
 import SwiftUI
-import CoreData
+import Foundation
+import SwiftData
 
 /// Detail view for a tool showing full details and usage tracking across jobs.
-/// Displays ownership, notes, aliases, and a list of all jobs this tool has been linked to.
+/// Displays photos, ownership, notes, aliases, and a list of all jobs this tool has been linked to.
 struct ToolDetailView: View {
-    @ObservedObject var tool: Tool
-    @Environment(\.managedObjectContext) private var viewContext
+    @Bindable var tool: Tool
+    @Environment(\.modelContext) private var viewContext
     @State private var showingEditTool = false
+    @State private var showingPurchaseConfirmation = false
+    @State private var showingPurchaseSuccess = false
+    @State private var showingFullscreenPhoto = false
+    @State private var selectedPhotoIndex: Int = 0
+    @State private var toolPhotos: [(index: Int, image: UIImage)] = []
 
     /// Sorted list of job records linked to this tool (most recent first)
     private var linkedJobs: [JobRecord] {
-        guard let jobSet = tool.jobRecords as? Set<JobRecord> else { return [] }
-        return jobSet.sorted { ($0.jobDate ?? Date.distantPast) > ($1.jobDate ?? Date.distantPast) }
+        guard let jobSet = tool.jobRecords else { return [] }
+        return jobSet.sorted { $0.jobDate > $1.jobDate }
     }
 
     /// Number of jobs this tool has been used in
     private var usageCount: Int {
-        (tool.jobRecords as? Set<JobRecord>)?.count ?? 0
+        (tool.jobRecords)?.count ?? 0
     }
 
     // Design system colors
@@ -27,6 +33,11 @@ struct ToolDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                // MARK: - Photo Gallery
+                if !toolPhotos.isEmpty {
+                    photoGallerySection
+                }
+
                 // Tool name & ownership header
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -34,7 +45,7 @@ struct ToolDetailView: View {
                             .font(.title2)
                             .foregroundColor(steelGray)
 
-                        Text(tool.name ?? "Unnamed Tool")
+                        Text(tool.name)
                             .font(.title2)
                             .fontWeight(.bold)
 
@@ -63,9 +74,31 @@ struct ToolDetailView: View {
                             }
                         }
                     }
+
+                    // Mark as Purchased button — only for borrowed tools
+                    if tool.ownershipType == "borrowed" {
+                        Button {
+                            showingPurchaseConfirmation = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "cart.badge.checkmark")
+                                    .font(.subheadline)
+                                Text("Mark as Purchased")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color(red: 0.133, green: 0.773, blue: 0.369))
+                            .cornerRadius(8)
+                        }
+                        .padding(.top, 4)
+                        .accessibilityIdentifier("markAsPurchasedButton")
+                    }
                 }
                 .padding(.horizontal)
-                .padding(.top, 8)
+                .padding(.top, toolPhotos.isEmpty ? 8 : 0)
 
                 // Notes
                 if let notes = tool.notes, !notes.isEmpty {
@@ -81,7 +114,7 @@ struct ToolDetailView: View {
                 }
 
                 // Aliases
-                if let aliases = tool.aliases as? [String], !aliases.isEmpty {
+                if let aliases = tool.aliases, !aliases.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Also Known As")
                             .font(.caption)
@@ -143,30 +176,28 @@ struct ToolDetailView: View {
                             .fontWeight(.semibold)
                             .foregroundColor(.secondary)
 
-                        ForEach(linkedJobs, id: \.objectID) { job in
-                            NavigationLink(destination: JobDetailView(job: job).environment(\.managedObjectContext, viewContext)) {
+                        ForEach(linkedJobs, id: \.id) { job in
+                            NavigationLink(destination: JobDetailView(job: job).modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
                                 HStack(spacing: 12) {
                                     Image(systemName: "doc.text.fill")
                                         .foregroundColor(industrialBlue)
                                         .font(.body)
 
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(job.aircraftType ?? "Unknown Aircraft")
+                                        Text(job.aircraftType.isEmpty ? "Unknown Aircraft" : job.aircraftType)
                                             .font(.body)
                                             .fontWeight(.medium)
                                             .foregroundColor(.primary)
 
                                         HStack(spacing: 8) {
-                                            if let system = job.system, !system.isEmpty {
-                                                Text(system)
+                                            if !job.system.isEmpty {
+                                                Text(job.system)
                                                     .font(.caption)
                                                     .foregroundColor(industrialBlue)
                                             }
-                                            if let date = job.jobDate {
-                                                Text(date, style: .date)
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                            }
+                                            Text(job.jobDate, style: .date)
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
                                         }
 
                                         if let component = job.component, !component.isEmpty {
@@ -195,18 +226,16 @@ struct ToolDetailView: View {
                 .padding(.horizontal)
 
                 // Created date
-                if let created = tool.createdAt {
-                    HStack {
-                        Text("Added to Garage:")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text(created, style: .date)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom, 20)
+                HStack {
+                    Text("Added to Garage:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(tool.createdAt, style: .date)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
+                .padding(.horizontal)
+                .padding(.bottom, 20)
             }
         }
         .navigationTitle("Tool Detail")
@@ -222,8 +251,132 @@ struct ToolDetailView: View {
         }
         .sheet(isPresented: $showingEditTool) {
             EditToolView(tool: tool)
-                .environment(\.managedObjectContext, viewContext)
+                .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
         }
+        .fullScreenCover(isPresented: $showingFullscreenPhoto) {
+            ToolPhotoFullscreenView(
+                photos: toolPhotos.map { $0.image },
+                selectedIndex: $selectedPhotoIndex
+            )
+        }
+        .alert("Mark as Purchased?", isPresented: $showingPurchaseConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Mark as Purchased") {
+                ToolService().markAsPurchased(tool)
+                showingPurchaseSuccess = true
+            }
+        } message: {
+            Text("'\(tool.name)' will be converted from borrowed to personal. All job records will automatically reflect this change.")
+        }
+        .alert("Tool Purchased!", isPresented: $showingPurchaseSuccess) {
+            Button("OK") { }
+        } message: {
+            Text("'\(tool.name)' is now a personal tool.")
+        }
+        .onAppear {
+            loadPhotos()
+        }
+        .onChange(of: showingEditTool) { _, isShowing in
+            if !isShowing {
+                // Reload photos when edit sheet is dismissed (user may have changed photos)
+                loadPhotos()
+            }
+        }
+    }
+
+    // MARK: - Photo Gallery Section
+
+    private var photoGallerySection: some View {
+        VStack(spacing: 0) {
+            if toolPhotos.count == 1 {
+                // Single photo — show full width hero
+                singlePhotoView
+            } else {
+                // Multiple photos — horizontal scroll with hero prominent
+                multiPhotoView
+            }
+
+            // Photo count indicator
+            HStack {
+                Spacer()
+                Text("\(toolPhotos.count) photo\(toolPhotos.count == 1 ? "" : "s")")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(.trailing, 16)
+                    .padding(.top, 4)
+            }
+        }
+    }
+
+    private var singlePhotoView: some View {
+        Button {
+            selectedPhotoIndex = 0
+            showingFullscreenPhoto = true
+        } label: {
+            Image(uiImage: toolPhotos[0].image)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity)
+                .frame(height: 250)
+                .clipped()
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Tool photo, tap to view full screen")
+    }
+
+    private var multiPhotoView: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Array(toolPhotos.enumerated()), id: \.element.index) { offset, photo in
+                    Button {
+                        selectedPhotoIndex = offset
+                        showingFullscreenPhoto = true
+                    } label: {
+                        Image(uiImage: photo.image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(
+                                width: offset == 0 ? 220 : 140,
+                                height: 200
+                            )
+                            .clipped()
+                            .cornerRadius(12)
+                            .overlay(
+                                // Hero badge on first photo
+                                Group {
+                                    if offset == 0 {
+                                        VStack {
+                                            HStack {
+                                                Spacer()
+                                                Image(systemName: "star.fill")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.white)
+                                                    .padding(6)
+                                                    .background(industrialBlue.opacity(0.8))
+                                                    .clipShape(Circle())
+                                                    .padding(6)
+                                            }
+                                            Spacer()
+                                        }
+                                    }
+                                }
+                            )
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Photo \(offset + 1) of \(toolPhotos.count)\(offset == 0 ? ", hero photo" : "")")
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
+        }
+    }
+
+    // MARK: - Load Photos
+
+    private func loadPhotos() {
+        toolPhotos = ToolPhotoService.shared.loadAllPhotos(for: tool)
     }
 
     private var ownershipLabel: String {
@@ -231,6 +384,7 @@ struct ToolDetailView: View {
         case "personal": return "Personal"
         case "shop": return "Shop"
         case "borrowed": return "Borrowed"
+        case "imported": return "Imported"
         default: return "Personal"
         }
     }
@@ -240,7 +394,61 @@ struct ToolDetailView: View {
         case "personal": return industrialBlue
         case "shop": return steelGray
         case "borrowed": return safetyOrange
+        case "imported": return Color(red: 0.608, green: 0.318, blue: 0.878)
         default: return industrialBlue
         }
+    }
+}
+
+// MARK: - Fullscreen Photo Viewer
+
+/// Fullscreen photo viewer with swipe navigation between tool photos.
+/// Presented as a full screen cover with dismiss gesture.
+struct ToolPhotoFullscreenView: View {
+    let photos: [UIImage]
+    @Binding var selectedIndex: Int
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            TabView(selection: $selectedIndex) {
+                ForEach(Array(photos.enumerated()), id: \.offset) { index, image in
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .tag(index)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: photos.count > 1 ? .always : .never))
+
+            // Close button
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title)
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding()
+                    }
+                    .accessibilityLabel("Close photo viewer")
+                }
+                Spacer()
+
+                // Photo counter
+                if photos.count > 1 {
+                    Text("\(selectedIndex + 1) / \(photos.count)")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white.opacity(0.8))
+                        .padding(.bottom, 8)
+                }
+            }
+        }
+        .statusBarHidden()
     }
 }

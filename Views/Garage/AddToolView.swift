@@ -1,22 +1,20 @@
 import SwiftUI
-import CoreData
+import Foundation
+import SwiftData
+import PhotosUI
 
 /// View for creating a new tool entry in the Garage.
 /// Saves directly to Core Data via the managed object context.
-/// Supports optional group assignment for organizing tools in nested groups.
+/// Supports optional set assignment for organizing tools in nested sets.
+/// Feature #130: Renamed from "Tool Group" to "Tool Set" throughout UI.
+/// Feature #133: Tool Sets only show matching ownership (Personal sets for Personal tools, Shop sets for Shop tools).
 struct AddToolView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.modelContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
 
-    /// Fetch all tool groups for the group picker
-    @FetchRequest(
-        sortDescriptors: [
-            NSSortDescriptor(keyPath: \ToolGroup.sortOrder, ascending: true),
-            NSSortDescriptor(keyPath: \ToolGroup.name, ascending: true)
-        ],
-        animation: .default
-    )
-    private var allGroups: FetchedResults<ToolGroup>
+    /// Fetch all tool sets for the set picker
+    @Query(sort: [SortDescriptor(\FROToolGroup.sortOrder, order: .forward), SortDescriptor(\FROToolGroup.name, order: .forward)])
+    private var allGroups: [FROToolGroup]
 
     @State private var name: String = ""
     @State private var ownershipType: String = "personal"
@@ -28,65 +26,134 @@ struct AddToolView: View {
     @State private var errorMessage = ""
     @State private var showingSuccess = false
     @State private var savedToolName = ""
+    @State private var photoImages: [UIImage] = []
 
-    /// Optional pre-selected group (when adding tool from within a group)
+    /// Optional pre-selected set (when adding tool from within a set)
     var initialGroup: ToolGroup?
 
     private let ownershipOptions = ["personal", "shop", "borrowed"]
+
+    /// Feature #133: Filtered Tool Sets that match the current ownership type.
+    /// A Personal tool can only be added to a Personal Tool Set.
+    /// A Shop tool can only be added to a Shop Tool Set.
+    /// Borrowed tools cannot be added to any Tool Set.
+    private var matchingGroups: [ToolGroup] {
+        Array(allGroups).filter { group in
+            let groupOwnership = group.ownershipType
+            return groupOwnership == ownershipType
+        }
+    }
 
     var body: some View {
         NavigationStack {
             Form {
                 // MARK: - Tool Name
-                Section(header: Text("Tool Name")) {
+                Section {
                     TextField("e.g., 3/8\" Torque Wrench", text: $name)
                         .font(.body)
                         .autocorrectionDisabled()
-                }
-
-                // MARK: - Group Assignment
-                if !allGroups.isEmpty {
-                    Section(header: Text("Tool Group (Optional)")) {
-                        Picker("Group", selection: $selectedGroup) {
-                            Text("No Group").tag(nil as ToolGroup?)
-                            ForEach(allGroups, id: \.objectID) { group in
-                                Text(groupDisplayName(for: group))
-                                    .tag(group as ToolGroup?)
-                            }
-                        }
-                    }
+                } header: {
+                    Text("Tool Name")
                 }
 
                 // MARK: - Ownership
-                Section(header: Text("Ownership")) {
+                // Feature #121: The ownership section must come before group assignment.
+                // If "Borrowed" is selected, the group picker is hidden (borrowed tools cannot be in groups).
+                Section {
                     Picker("Type", selection: $ownershipType) {
                         Text("Personal").tag("personal")
                         Text("Shop").tag("shop")
                         Text("Borrowed").tag("borrowed")
                     }
                     .pickerStyle(.segmented)
+                    .accessibilityIdentifier("addToolOwnershipPicker")
 
+                    // Feature #104: Borrowed from field autocompletes from previous entries
                     if ownershipType == "borrowed" {
-                        TextField("Borrowed from...", text: $borrowedFrom)
-                            .font(.body)
+                        BorrowedFromAutocompleteField(
+                            borrowedFrom: $borrowedFrom,
+                            placeholder: "Borrowed from...",
+                            accessibilityPrefix: "addTool_"
+                        )
+                    }
+                } header: {
+                    Text("Ownership")
+                }
+                // Feature #121: When ownership changes to "borrowed", clear any selected set
+                // Feature #133: When ownership changes, clear the selected set if it doesn't match
+                .onChange(of: ownershipType) { oldValue, newValue in
+                    if newValue == "borrowed" && selectedGroup != nil {
+                        selectedGroup = nil
+                    } else if let group = selectedGroup {
+                        // Feature #133: Clear selection if the group ownership doesn't match the new tool ownership
+                        let groupOwnership = group.ownershipType
+                        if groupOwnership != newValue {
+                            selectedGroup = nil
+                        }
+                    }
+                }
+
+                // MARK: - Set Assignment
+                // Feature #121: Set picker is only shown for Personal and Shop tools.
+                // Feature #130: Renamed from "Tool Group" to "Tool Set".
+                // Feature #133: Only show Tool Sets matching the tool's ownership type.
+                // Borrowed tools cannot be added to Tool Sets - they remain standalone in the Borrowed section.
+                if ownershipType != "borrowed" {
+                    Section {
+                        if matchingGroups.isEmpty {
+                            // No matching Tool Sets available
+                            HStack(spacing: 8) {
+                                Image(systemName: "folder.badge.questionmark")
+                                    .foregroundColor(.secondary)
+                                Text("No \(ownershipType == "personal" ? "Personal" : "Shop") Tool Sets available")
+                                    .foregroundColor(.secondary)
+                            }
+                            .font(.subheadline)
+                            .padding(.vertical, 4)
+                            .accessibilityIdentifier("noMatchingGroupsMessage")
+                        } else {
+                            Picker("Set", selection: $selectedGroup) {
+                                Text("No Set").tag(nil as ToolGroup?)
+                                ForEach(matchingGroups, id: \.id) { group in
+                                    Text(groupDisplayName(for: group))
+                                        .tag(group as ToolGroup?)
+                                }
+                            }
+                            .accessibilityIdentifier("addToolGroupPicker")
+                        }
+                    } header: {
+                        Text("Tool Set (Optional)")
+                    } footer: {
+                        // Feature #133: Explain why only certain sets are shown
+                        Text("\(ownershipType == "personal" ? "Personal" : "Shop") tools can only be added to \(ownershipType == "personal" ? "Personal" : "Shop") Tool Sets.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .accessibilityIdentifier("addToolGroupFooter")
                     }
                 }
 
                 // MARK: - Aliases
-                Section(header: Text("Aliases (Optional)")) {
+                Section {
                     TextField("e.g., Dog Bone, Torque Adapter", text: $aliasText, axis: .vertical)
                         .font(.body)
                         .lineLimit(2...4)
                     Text("Comma-separated alternate names for this tool")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                } header: {
+                    Text("Aliases (Optional)")
                 }
 
                 // MARK: - Notes
-                Section(header: Text("Notes (Optional)")) {
+                Section {
                     TextField("Size, spec, or other notes", text: $notes, axis: .vertical)
                         .lineLimit(3...6)
+                } header: {
+                    Text("Notes (Optional)")
                 }
+
+                // MARK: - Photos
+                ToolPhotoEditorSection(images: $photoImages)
             }
             .navigationTitle("Add Tool")
             .navigationBarTitleDisplayMode(.inline)
@@ -126,12 +193,12 @@ struct AddToolView: View {
 
     // MARK: - Helpers
 
-    /// Builds a display name showing the group hierarchy path (e.g., "1/4-inch Drive > Shallow Sockets")
+    /// Builds a display name showing the set hierarchy path (e.g., "1/4-inch Drive > Shallow Sockets")
     private func groupDisplayName(for group: ToolGroup) -> String {
-        var path = [group.name ?? "Unnamed"]
+        var path = [group.name]
         var current = group
         while let parent = current.parentGroup {
-            path.insert(parent.name ?? "Unnamed", at: 0)
+            path.insert(parent.name, at: 0)
             current = parent
         }
         return path.joined(separator: " > ")
@@ -147,12 +214,12 @@ struct AddToolView: View {
             return
         }
 
-        let tool = Tool(context: viewContext)
-        tool.id = UUID()
-        tool.name = trimmedName
-        tool.ownershipType = ownershipType
-        tool.createdAt = Date()
-        tool.group = selectedGroup
+        let tool = FROTool(name: trimmedName, ownershipType: ownershipType)
+        viewContext.insert(tool)
+        // Feature #121: Borrowed tools cannot be in sets - enforce this rule
+        tool.group = (ownershipType == "borrowed") ? nil : selectedGroup
+        // Feature #96: Mark as in Garage so it appears in filtered lists
+        tool.isInGarage = true
 
         if ownershipType == "borrowed" && !borrowedFrom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             tool.borrowedFrom = borrowedFrom.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -169,16 +236,21 @@ struct AddToolView: View {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         if !parsedAliases.isEmpty {
-            tool.aliases = parsedAliases as NSArray
+            tool.aliases = parsedAliases
         }
 
         do {
             try viewContext.save()
-            print("AddToolView: Saved tool '\(trimmedName)' to Core Data (group: \(selectedGroup?.name ?? "none"))")
+
+            // Save photos after Core Data save (tool needs valid ID)
+            if !photoImages.isEmpty {
+                try ToolPhotoService.shared.saveAllPhotos(photoImages, for: tool, context: viewContext)
+            }
+
+            print("AddToolView: Saved tool '\(trimmedName)' to Core Data (group: \(selectedGroup?.name ?? "none"), photos: \(photoImages.count))")
             savedToolName = trimmedName
             showingSuccess = true
         } catch {
-            viewContext.rollback()
             errorMessage = "Failed to save tool: \(error.localizedDescription)"
             showingError = true
             print("AddToolView: Save failed, rolled back - \(error)")
@@ -188,5 +260,5 @@ struct AddToolView: View {
 
 #Preview {
     AddToolView()
-        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
 }

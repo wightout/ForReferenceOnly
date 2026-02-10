@@ -3,7 +3,7 @@ import SwiftUI
 /// View for creating a new chemical entry in the Garage.
 /// Saves directly to Core Data via the managed object context.
 struct AddChemicalView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.modelContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
 
     @State private var name: String = ""
@@ -101,11 +101,8 @@ struct AddChemicalView: View {
             return
         }
 
-        let chemical = Chemical(context: viewContext)
-        chemical.id = UUID()
-        chemical.name = trimmedName
-        chemical.category = category
-        chemical.createdAt = Date()
+        let chemical = FROChemical(name: trimmedName, category: category)
+        viewContext.insert(chemical)
 
         let trimmedSize = size.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedSize.isEmpty {
@@ -128,7 +125,6 @@ struct AddChemicalView: View {
             savedChemicalName = trimmedName
             showingSuccess = true
         } catch {
-            viewContext.rollback()
             errorMessage = "Failed to save chemical: \(error.localizedDescription)"
             showingError = true
             print("AddChemicalView: Save failed, rolled back - \(error)")
@@ -138,5 +134,5 @@ struct AddChemicalView: View {
 
 #Preview {
     AddChemicalView()
-        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
 }

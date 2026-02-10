@@ -1,16 +1,17 @@
 import SwiftUI
-import CoreData
+import Foundation
+import SwiftData
 
 /// Displays a list of all versions (revisions) for a job record.
 /// Users can tap any version to view the historical snapshot.
 struct VersionHistoryView: View {
-    @ObservedObject var job: JobRecord
-    @Environment(\.managedObjectContext) private var viewContext
+    @Bindable var job: JobRecord
+    @Environment(\.modelContext) private var viewContext
 
     /// All revisions for this job, sorted by version number descending (newest first)
     private var sortedRevisions: [JobRevision] {
-        guard let revisionSet = job.revisions as? Set<JobRevision> else { return [] }
-        return revisionSet.sorted { $0.versionNumber > $1.versionNumber }
+        let revisions = job.revisions ?? []
+        return revisions.sorted { $0.versionNumber > $1.versionNumber }
     }
 
     var body: some View {
@@ -27,12 +28,10 @@ struct VersionHistoryView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-                        if let updatedAt = job.updatedAt {
-                            Text(updatedAt, style: .date)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        Text(job.aircraftType ?? "Unknown Aircraft")
+                        Text(job.updatedAt, style: .date)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(job.aircraftType)
                             .font(.subheadline)
                     }
                     Spacer()
@@ -45,18 +44,16 @@ struct VersionHistoryView: View {
             // Historical versions
             if !sortedRevisions.isEmpty {
                 Section(header: Text("Previous Versions")) {
-                    ForEach(sortedRevisions, id: \.objectID) { revision in
+                    ForEach(sortedRevisions, id: \.id) { revision in
                         NavigationLink(destination: RevisionDetailView(revision: revision)) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("v\(revision.versionNumber)")
                                         .font(.headline)
                                         .foregroundColor(Color(red: 0.392, green: 0.455, blue: 0.545))
-                                    if let editedAt = revision.editedAt {
-                                        Text(editedAt, style: .date)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
+                                    Text(revision.editedAt, style: .date)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                     if let snapshot = decodeSnapshot(revision.snapshotData) {
                                         Text(snapshot["aircraftType"] as? String ?? "Unknown Aircraft")
                                             .font(.subheadline)

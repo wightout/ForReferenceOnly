@@ -1,16 +1,17 @@
 import SwiftUI
-import CoreData
+import Foundation
+import SwiftData
 
 /// Voice capture UI component for recording and transcribing voice memos.
 /// Designed for mechanics with large tap targets for gloved/greasy hands.
 /// After transcription, identifies candidate tools, consumables, and chemicals
 /// from the user's Garage inventory and shows a review screen.
 struct VoiceCaptureView: View {
-    @Environment(\.managedObjectContext) private var viewContext
-    @StateObject private var voiceService = VoiceCaptureService()
+    @Environment(\.modelContext) private var viewContext
+    @State private var voiceService = VoiceCaptureService()
 
     /// Callback with selected tool IDs, consumable IDs, chemical IDs, and transcribed text
-    var onTranscriptionWithCandidates: ((Set<NSManagedObjectID>, Set<NSManagedObjectID>, Set<NSManagedObjectID>, String) -> Void)?
+    var onTranscriptionWithCandidates: ((Set<UUID>, Set<UUID>, Set<UUID>, String) -> Void)?
 
     /// Legacy callback for transcribed text only (backwards compatibility)
     var onTranscriptionComplete: ((String) -> Void)?
@@ -98,7 +99,7 @@ struct VoiceCaptureView: View {
                     },
                     isPresented: $showingCandidateReview
                 )
-                .environment(\.managedObjectContext, viewContext)
+                .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
         }
     }
@@ -501,5 +502,5 @@ struct VoiceCaptureView: View {
         },
         isPresented: .constant(true)
     )
-    .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
 }

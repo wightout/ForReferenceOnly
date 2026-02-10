@@ -3,10 +3,10 @@ import SwiftUI
 /// View for editing an existing chemical entry in the Garage.
 /// Pre-populates fields with existing data and saves changes to Core Data.
 struct EditChemicalView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.modelContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
 
-    @ObservedObject var chemical: Chemical
+    @Bindable var chemical: Chemical
 
     @State private var name: String = ""
     @State private var category: String = "other"
@@ -83,8 +83,8 @@ struct EditChemicalView: View {
             }
             .onAppear {
                 // Pre-populate fields with existing chemical data
-                name = chemical.name ?? ""
-                category = chemical.category ?? "other"
+                name = chemical.name
+                category = chemical.category
                 size = chemical.size ?? ""
                 spec = chemical.spec ?? ""
                 notes = chemical.notes ?? ""
@@ -119,7 +119,6 @@ struct EditChemicalView: View {
             print("EditChemicalView: Updated chemical '\(trimmedName)' in Core Data")
             dismiss()
         } catch {
-            viewContext.rollback()
             errorMessage = "Failed to save changes: \(error.localizedDescription)"
             showingError = true
             print("EditChemicalView: Save failed, rolled back - \(error)")
@@ -128,16 +127,7 @@ struct EditChemicalView: View {
 }
 
 #Preview {
-    let context = PersistenceController.preview.container.viewContext
-    let chemical = Chemical(context: context)
-    chemical.id = UUID()
-    chemical.name = "MIL-PRF-83282"
-    chemical.category = "fluid"
-    chemical.size = "1 quart"
-    chemical.spec = "MIL-PRF-83282"
-    chemical.notes = "Synthetic hydraulic fluid"
-    chemical.createdAt = Date()
-
-    return EditChemicalView(chemical: chemical)
-        .environment(\.managedObjectContext, context)
+    let chemical = FROChemical(name: "MIL-PRF-83282", category: "fluid")
+    EditChemicalView(chemical: chemical)
+        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
 }

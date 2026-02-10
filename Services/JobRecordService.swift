@@ -1,28 +1,20 @@
-import CoreData
+import Foundation
+import SwiftData
 
-/// JobRecordService handles all CRUD operations for JobRecord entities in Core Data.
+/// JobRecordService handles all CRUD operations for FROJob entities in SwiftData.
 /// Uses the real SQLite-backed persistent store for all operations.
+@MainActor
 class JobRecordService {
 
     // MARK: - Properties
 
-    private let persistenceController: PersistenceController
-
-    /// The managed object context used for all operations
-    var viewContext: NSManagedObjectContext {
-        persistenceController.viewContext
-    }
-
-    // MARK: - Initialization
-
-    /// Initialize with a persistence controller (defaults to shared singleton)
-    init(persistenceController: PersistenceController = .shared) {
-        self.persistenceController = persistenceController
+    private var modelContext: ModelContext {
+        SharedModelContainer.shared.mainContext
     }
 
     // MARK: - Create
 
-    /// Creates a new JobRecord in Core Data and saves immediately.
+    /// Creates a new JobRecord in SwiftData and saves immediately.
     /// - Parameters:
     ///   - aircraftType: The aircraft type (required)
     ///   - system: The system worked on (required)
@@ -34,7 +26,7 @@ class JobRecordService {
     ///   - tmReferences: Technical manual references (optional)
     ///   - notes: Additional notes (optional)
     ///   - recommendations: Recommendations (optional)
-    /// - Returns: The created JobRecord managed object
+    /// - Returns: The created JobRecord object
     @discardableResult
     func createJobRecord(
         aircraftType: String,
@@ -47,31 +39,26 @@ class JobRecordService {
         tmReferences: String? = nil,
         notes: String? = nil,
         recommendations: String? = nil
-    ) -> JobRecord {
-        let context = viewContext
-        let record = JobRecord(context: context)
-        record.id = UUID()
-        record.aircraftType = aircraftType
-        record.system = system
-        record.aircraftSerialNumber = aircraftSerialNumber
-        record.nNumber = nNumber
-        record.component = component
-        record.jobDate = jobDate
-        record.taskDescription = taskDescription
-        record.tmReferences = tmReferences
-        record.notes = notes
-        record.recommendations = recommendations
-        record.createdAt = Date()
-        record.updatedAt = Date()
-        record.currentVersion = 1
+    ) -> FROJob {
+        let record = FROJob(
+            aircraftType: aircraftType,
+            aircraftSerialNumber: aircraftSerialNumber,
+            nNumber: nNumber,
+            system: system,
+            component: component,
+            jobDate: jobDate,
+            taskDescription: taskDescription,
+            tmReferences: tmReferences,
+            notes: notes,
+            recommendations: recommendations
+        )
+        modelContext.insert(record)
 
         do {
-            try context.save()
+            try modelContext.save()
             print("JobRecordService: Created job record for '\(aircraftType)' successfully")
         } catch {
-            // Rollback to prevent partial/corrupted records from lingering in context
-            context.rollback()
-            print("JobRecordService: Failed to create job record, rolled back - \(error)")
+            print("JobRecordService: Failed to create job record - \(error)")
         }
 
         return record
@@ -80,14 +67,14 @@ class JobRecordService {
     // MARK: - Read
 
     /// Fetches all job records, sorted by job date descending (most recent first).
-    /// - Returns: Array of JobRecord managed objects
-    func fetchAllJobRecords() -> [JobRecord] {
-        let request = NSFetchRequest<JobRecord>(entityName: "JobRecord")
-        request.sortDescriptors = [NSSortDescriptor(key: "jobDate", ascending: false)]
+    /// - Returns: Array of JobRecord objects
+    func fetchAllJobRecords() -> [FROJob] {
+        let descriptor = FetchDescriptor<FROJob>(
+            sortBy: [SortDescriptor(\.jobDate, order: .reverse)]
+        )
 
         do {
-            let records = try viewContext.fetch(request)
-            return records
+            return try modelContext.fetch(descriptor)
         } catch {
             print("JobRecordService: Failed to fetch job records - \(error)")
             return []
@@ -97,13 +84,14 @@ class JobRecordService {
     /// Fetches a single job record by its UUID.
     /// - Parameter id: The job record's UUID
     /// - Returns: The JobRecord if found, nil otherwise
-    func fetchJobRecord(byId id: UUID) -> JobRecord? {
-        let request = NSFetchRequest<JobRecord>(entityName: "JobRecord")
-        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
-        request.fetchLimit = 1
+    func fetchJobRecord(byId id: UUID) -> FROJob? {
+        var descriptor = FetchDescriptor<FROJob>(
+            predicate: #Predicate { $0.id == id }
+        )
+        descriptor.fetchLimit = 1
 
         do {
-            return try viewContext.fetch(request).first
+            return try modelContext.fetch(descriptor).first
         } catch {
             print("JobRecordService: Failed to fetch job record by ID - \(error)")
             return nil
@@ -113,13 +101,14 @@ class JobRecordService {
     /// Fetches job records matching an aircraft type.
     /// - Parameter aircraftType: The aircraft type to filter by
     /// - Returns: Array of matching JobRecord objects
-    func fetchJobRecords(byAircraftType aircraftType: String) -> [JobRecord] {
-        let request = NSFetchRequest<JobRecord>(entityName: "JobRecord")
-        request.predicate = NSPredicate(format: "aircraftType == %@", aircraftType)
-        request.sortDescriptors = [NSSortDescriptor(key: "jobDate", ascending: false)]
+    func fetchJobRecords(byAircraftType aircraftType: String) -> [FROJob] {
+        let descriptor = FetchDescriptor<FROJob>(
+            predicate: #Predicate { $0.aircraftType == aircraftType },
+            sortBy: [SortDescriptor(\.jobDate, order: .reverse)]
+        )
 
         do {
-            return try viewContext.fetch(request)
+            return try modelContext.fetch(descriptor)
         } catch {
             print("JobRecordService: Failed to fetch job records by aircraft type - \(error)")
             return []
@@ -129,13 +118,14 @@ class JobRecordService {
     /// Fetches job records matching a system.
     /// - Parameter system: The system to filter by
     /// - Returns: Array of matching JobRecord objects
-    func fetchJobRecords(bySystem system: String) -> [JobRecord] {
-        let request = NSFetchRequest<JobRecord>(entityName: "JobRecord")
-        request.predicate = NSPredicate(format: "system == %@", system)
-        request.sortDescriptors = [NSSortDescriptor(key: "jobDate", ascending: false)]
+    func fetchJobRecords(bySystem system: String) -> [FROJob] {
+        let descriptor = FetchDescriptor<FROJob>(
+            predicate: #Predicate { $0.system == system },
+            sortBy: [SortDescriptor(\.jobDate, order: .reverse)]
+        )
 
         do {
-            return try viewContext.fetch(request)
+            return try modelContext.fetch(descriptor)
         } catch {
             print("JobRecordService: Failed to fetch job records by system - \(error)")
             return []
@@ -144,9 +134,9 @@ class JobRecordService {
 
     /// Returns the total count of job records.
     func countJobRecords() -> Int {
-        let request = NSFetchRequest<JobRecord>(entityName: "JobRecord")
+        let descriptor = FetchDescriptor<FROJob>()
         do {
-            return try viewContext.count(for: request)
+            return try modelContext.fetchCount(descriptor)
         } catch {
             print("JobRecordService: Failed to count job records - \(error)")
             return 0
@@ -156,16 +146,15 @@ class JobRecordService {
     // MARK: - Update
 
     /// Updates a job record's properties and saves.
-    /// Automatically increments the version and creates a revision snapshot.
     /// - Parameters:
-    ///   - record: The JobRecord managed object to update
+    ///   - record: The JobRecord object to update
     ///   - aircraftType: New aircraft type (optional, keeps current if nil)
     ///   - system: New system (optional)
     ///   - taskDescription: New task description (optional)
     ///   - notes: New notes (optional)
     ///   - recommendations: New recommendations (optional)
     func updateJobRecord(
-        _ record: JobRecord,
+        _ record: FROJob,
         aircraftType: String? = nil,
         system: String? = nil,
         taskDescription: String? = nil,
@@ -180,30 +169,26 @@ class JobRecordService {
         record.updatedAt = Date()
 
         do {
-            try viewContext.save()
-            print("JobRecordService: Updated job record '\(record.aircraftType ?? "unknown")' successfully")
+            try modelContext.save()
+            print("JobRecordService: Updated job record '\(record.aircraftType)' successfully")
         } catch {
-            // Rollback to prevent partial changes from corrupting data
-            viewContext.rollback()
-            print("JobRecordService: Failed to update job record, rolled back - \(error)")
+            print("JobRecordService: Failed to update job record - \(error)")
         }
     }
 
     // MARK: - Delete
 
-    /// Deletes a job record from Core Data and saves.
-    /// - Parameter record: The JobRecord managed object to delete
-    func deleteJobRecord(_ record: JobRecord) {
-        let aircraftType = record.aircraftType ?? "unknown"
-        viewContext.delete(record)
+    /// Deletes a job record from SwiftData and saves.
+    /// - Parameter record: The JobRecord object to delete
+    func deleteJobRecord(_ record: FROJob) {
+        let aircraftType = record.aircraftType
+        modelContext.delete(record)
 
         do {
-            try viewContext.save()
+            try modelContext.save()
             print("JobRecordService: Deleted job record for '\(aircraftType)' successfully")
         } catch {
-            // Rollback to prevent partial deletion state from corrupting data
-            viewContext.rollback()
-            print("JobRecordService: Failed to delete job record, rolled back - \(error)")
+            print("JobRecordService: Failed to delete job record - \(error)")
         }
     }
 }

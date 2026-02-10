@@ -1,18 +1,21 @@
 import SwiftUI
-import CoreData
+import Foundation
+import SwiftData
 
 /// Purchase Justification View - shows borrowed tool history to help justify purchases.
 /// Displays borrowed tools sorted by usage frequency, supporting purchase decisions.
 struct PurchaseJustificationView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.modelContext) private var viewContext
 
     /// Fetch all borrowed tools sorted by name
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Tool.name, ascending: true)],
-        predicate: NSPredicate(format: "ownershipType == %@", "borrowed"),
-        animation: .default
-    )
-    private var borrowedTools: FetchedResults<Tool>
+    @Query(filter: #Predicate<FROTool> { $0.ownershipType == "borrowed" }, sort: \FROTool.name, order: .forward)
+    private var borrowedTools: [FROTool]
+
+    // Purchase confirmation state
+    @State private var showingPurchaseConfirmation = false
+    @State private var toolToPurchase: Tool?
+    @State private var showingPurchaseSuccess = false
+    @State private var purchasedToolName = ""
 
     // Design system colors
     private let industrialBlue = Color(red: 0.145, green: 0.388, blue: 0.922)
@@ -23,18 +26,18 @@ struct PurchaseJustificationView: View {
     /// Borrowed tools sorted by usage count (most used first)
     private var toolsSortedByUsage: [Tool] {
         borrowedTools.sorted { tool1, tool2 in
-            let count1 = (tool1.jobRecords as? Set<JobRecord>)?.count ?? 0
-            let count2 = (tool2.jobRecords as? Set<JobRecord>)?.count ?? 0
+            let count1 = (tool1.jobRecords)?.count ?? 0
+            let count2 = (tool2.jobRecords)?.count ?? 0
             if count1 != count2 {
                 return count1 > count2  // Higher usage first
             }
-            return (tool1.name ?? "") < (tool2.name ?? "")  // Alphabetical tiebreaker
+            return tool1.name < tool2.name  // Alphabetical tiebreaker
         }
     }
 
     /// Get usage count for a tool
     private func usageCount(for tool: Tool) -> Int {
-        (tool.jobRecords as? Set<JobRecord>)?.count ?? 0
+        (tool.jobRecords)?.count ?? 0
     }
 
     var body: some View {
@@ -48,7 +51,7 @@ struct PurchaseJustificationView: View {
                     .foregroundColor(safetyOrange)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
-                    .background(safetyOrange.opacity(0.1))
+                    .background(safetyOrange.opacity(0.2))
                     .cornerRadius(4)
                 Spacer()
             }
@@ -137,12 +140,21 @@ struct PurchaseJustificationView: View {
                             }
                             .padding(.horizontal)
 
-                            ForEach(toolsSortedByUsage, id: \.objectID) { tool in
-                                NavigationLink(destination: ToolDetailView(tool: tool).environment(\.managedObjectContext, viewContext)) {
+                            ForEach(toolsSortedByUsage, id: \.id) { tool in
+                                NavigationLink(destination: ToolDetailView(tool: tool).modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
                                     PurchaseJustificationRowView(
                                         tool: tool,
                                         usageCount: usageCount(for: tool)
                                     )
+                                }
+                                .swipeActions(edge: .trailing) {
+                                    Button {
+                                        toolToPurchase = tool
+                                        showingPurchaseConfirmation = true
+                                    } label: {
+                                        Label("Mark as Purchased", systemImage: "cart.badge.checkmark")
+                                    }
+                                    .tint(successGreen)
                                 }
                                 .padding(.horizontal)
                             }
@@ -174,12 +186,33 @@ struct PurchaseJustificationView: View {
         }
         .navigationTitle("Purchase Justification")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Mark as Purchased?", isPresented: $showingPurchaseConfirmation) {
+            Button("Cancel", role: .cancel) {
+                toolToPurchase = nil
+            }
+            Button("Mark as Purchased") {
+                if let tool = toolToPurchase {
+                    let name = tool.name
+                    ToolService().markAsPurchased(tool)
+                    purchasedToolName = name
+                    toolToPurchase = nil
+                    showingPurchaseSuccess = true
+                }
+            }
+        } message: {
+            Text("'\(toolToPurchase?.name ?? "This tool")' will be converted from borrowed to personal. All job records will automatically reflect this change.")
+        }
+        .alert("Tool Purchased!", isPresented: $showingPurchaseSuccess) {
+            Button("OK") { }
+        } message: {
+            Text("'\(purchasedToolName)' is now a personal tool. It has been removed from this list.")
+        }
     }
 
     /// Total usage count across all borrowed tools
     private var totalBorrowedUsage: Int {
         borrowedTools.reduce(0) { sum, tool in
-            sum + ((tool.jobRecords as? Set<JobRecord>)?.count ?? 0)
+            sum + ((tool.jobRecords)?.count ?? 0)
         }
     }
 }
@@ -188,7 +221,7 @@ struct PurchaseJustificationView: View {
 
 /// Row view for a borrowed tool showing usage statistics for purchase justification.
 struct PurchaseJustificationRowView: View {
-    @ObservedObject var tool: Tool
+    @Bindable var tool: Tool
     let usageCount: Int
 
     // Design system colors
@@ -221,7 +254,7 @@ struct PurchaseJustificationRowView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 // Tool name
-                Text(tool.name ?? "Unnamed Tool")
+                Text(tool.name)
                     .font(.headline)
                     .foregroundColor(.primary)
 
@@ -292,6 +325,6 @@ struct PurchaseJustificationRowView: View {
 #Preview {
     NavigationStack {
         PurchaseJustificationView()
-            .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+            .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
     }
 }

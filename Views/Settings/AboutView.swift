@@ -1,10 +1,11 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// About/Info screen displaying app information and the FRO disclaimer.
 /// Accessed via the gear icon in the Dashboard navigation bar.
 /// Also provides data management options including clearing all data and exporting data.
 struct AboutView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.modelContext) private var viewContext
 
     /// App version retrieved from Info.plist (MARKETING_VERSION)
     private var appVersion: String {
@@ -24,12 +25,22 @@ struct AboutView: View {
     @State private var resultAlertTitle = ""
     @State private var resultAlertMessage = ""
 
+    /// Thumbnail display toggle — syncs with GarageView row views via @AppStorage
+    @AppStorage("showToolThumbnails") private var showToolThumbnails = true
+
     /// Controls the share sheet for exporting data
     @State private var showShareSheet = false
     @State private var exportFileURL: URL?
 
     /// Controls export in-progress state
     @State private var isExporting = false
+
+    // Import state
+    @State private var showingFileImporter = false
+    @State private var showingImportReview = false
+    @State private var importedData: ImportedJobData?
+    @State private var showImportError = false
+    @State private var importErrorMessage = ""
 
     var body: some View {
         ScrollView {
@@ -100,7 +111,7 @@ struct AboutView: View {
                         .padding(.top, 4)
                 }
                 .padding()
-                .background(Color(red: 0.976, green: 0.451, blue: 0.086).opacity(0.1))
+                .background(Color(red: 0.976, green: 0.451, blue: 0.086).opacity(0.2))
                 .cornerRadius(12)
                 .padding(.horizontal)
 
@@ -118,6 +129,45 @@ struct AboutView: View {
                     AboutFeatureRow(icon: "doc.richtext", title: "PDF Reports", description: "Share job summaries")
                 }
                 .padding(.vertical)
+
+                // Preferences Section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Preferences")
+                        .font(.headline)
+                        .foregroundColor(Color(red: 0.118, green: 0.161, blue: 0.231))
+                        .padding(.horizontal)
+
+                    // Tool Thumbnails Toggle
+                    HStack {
+                        Image(systemName: "photo.fill")
+                            .font(.title3)
+                            .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
+                            .frame(width: 30)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Tool Thumbnails")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(Color(red: 0.118, green: 0.161, blue: 0.231))
+
+                            Text("Show photo thumbnails when browsing tools in the Garage")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        Toggle("", isOn: $showToolThumbnails)
+                            .labelsHidden()
+                            .accessibilityIdentifier("showToolThumbnailsToggle")
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                }
+                .padding(.vertical)
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
+                .padding(.horizontal)
 
                 // Data Management Section
                 VStack(alignment: .leading, spacing: 12) {
@@ -164,6 +214,78 @@ struct AboutView: View {
                     .buttonStyle(.plain)
                     .disabled(isExporting)
                     .accessibilityIdentifier("exportDataButton")
+
+                    Divider()
+                        .padding(.horizontal)
+
+                    // Import from PDF Button
+                    Button(action: {
+                        showingFileImporter = true
+                    }) {
+                        HStack {
+                            Image(systemName: "square.and.arrow.down.fill")
+                                .font(.title3)
+                                .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
+                                .frame(width: 30)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Import from PDF")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(Color(red: 0.118, green: 0.161, blue: 0.231))
+
+                                Text("Create a job record from an FRO PDF report")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("importFromPDFButton")
+
+                    Divider()
+                        .padding(.horizontal)
+
+                    // Blank Fillable Form Button
+                    Button(action: {
+                        generateBlankTemplate()
+                    }) {
+                        HStack {
+                            Image(systemName: "doc.badge.plus")
+                                .font(.title3)
+                                .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
+                                .frame(width: 30)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Blank Fillable Form")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(Color(red: 0.118, green: 0.161, blue: 0.231))
+
+                                Text("Generate a blank FRO form to fill out on a computer")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("blankFillableFormButton")
 
                     Divider()
                         .padding(.horizontal)
@@ -245,11 +367,42 @@ struct AboutView: View {
                 ShareSheet(activityItems: [fileURL])
             }
         }
+        .fileImporter(
+            isPresented: $showingFileImporter,
+            allowedContentTypes: [UTType.pdf],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                do {
+                    importedData = try ImportService.importFromPDF(url: url)
+                    showingImportReview = true
+                } catch {
+                    importErrorMessage = error.localizedDescription
+                    showImportError = true
+                }
+            case .failure(let error):
+                importErrorMessage = error.localizedDescription
+                showImportError = true
+            }
+        }
+        .sheet(isPresented: $showingImportReview) {
+            if let data = importedData {
+                ImportJobView(importedData: data)
+                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+            }
+        }
+        .alert("Import Error", isPresented: $showImportError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(importErrorMessage)
+        }
     }
 
     /// Clears all data from the database
     private func clearAllData() {
-        let result = PersistenceController.shared.clearAllData()
+        let result = SharedModelContainer.shared.clearAllData()
         if result.success {
             resultAlertTitle = "Data Cleared"
             resultAlertMessage = "All data has been successfully deleted."
@@ -264,28 +417,33 @@ struct AboutView: View {
     /// Feature #86: Export job record data for backup
     private func exportData() {
         isExporting = true
-
-        // Run export on background thread to keep UI responsive
-        DispatchQueue.global(qos: .userInitiated).async {
+        Task {
             let result = ExportService.shared.exportAllData(context: viewContext)
-
-            DispatchQueue.main.async {
-                isExporting = false
-
-                if result.success, let fileURL = result.fileURL {
-                    exportFileURL = fileURL
-                    showShareSheet = true
-
-                    // Show success message with counts
-                    if let counts = result.counts {
-                        print("Export completed: \(counts.jobRecords) jobs, \(counts.tools) tools, \(counts.consumables) consumables, \(counts.chemicals) chemicals")
-                    }
-                } else {
-                    resultAlertTitle = "Export Failed"
-                    resultAlertMessage = result.error ?? "Failed to export data. Please try again."
-                    showResultAlert = true
+            isExporting = false
+            if result.success, let fileURL = result.fileURL {
+                exportFileURL = fileURL
+                showShareSheet = true
+                if let counts = result.counts {
+                    print("Export completed: \(counts.jobRecords) jobs, \(counts.tools) tools, \(counts.consumables) consumables, \(counts.chemicals) chemicals")
                 }
+            } else {
+                resultAlertTitle = "Export Failed"
+                resultAlertMessage = result.error ?? "Failed to export data. Please try again."
+                showResultAlert = true
             }
+        }
+    }
+
+    /// Generates a blank fillable PDF template and presents the share sheet.
+    private func generateBlankTemplate() {
+        if let url = PDFService.generateFillablePDFFile(for: nil) {
+            exportFileURL = url
+            showShareSheet = true
+            print("AboutView: Blank fillable template generated at \(url.path)")
+        } else {
+            resultAlertTitle = "Error"
+            resultAlertMessage = "Failed to generate blank fillable form. Please try again."
+            showResultAlert = true
         }
     }
 }

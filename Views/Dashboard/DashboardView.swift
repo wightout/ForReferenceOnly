@@ -1,25 +1,39 @@
 import SwiftUI
-import CoreData
+import Foundation
+import SwiftData
+import UniformTypeIdentifiers
 
 /// Dashboard view showing recent jobs and quick stats.
 struct DashboardView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.modelContext) private var viewContext
 
     /// Binding to the selected tab index so the empty state CTA can switch to New Job tab
     @Binding var selectedTab: Int
 
+    /// Which type of file import the user triggered (nil = file picker not shown)
+    enum ImportType { case pdf, frojob }
+    @State private var activeImportType: ImportType?
+    @State private var showingFileImporter = false
+
+    // PDF import state
+    @State private var showingImportReview = false
+    @State private var importedData: ImportedJobData?
+    @State private var showImportError = false
+    @State private var importErrorMessage = ""
+
+    // .frojob import state
+    @State private var showingFrojobImportReview = false
+    @State private var frojobParseResult: JobImportService.JobImportParseResult?
+    @State private var showFrojobImportSuccess = false
+    @State private var importedJobAircraftType = ""
+
     /// Fetch recent job records, most recent by job date first
     /// Feature #74: Sort by jobDate for correct date boundary sorting (Dec 31 before Jan 1)
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \JobRecord.jobDate, ascending: false)],
-        animation: .default
-    )
-    private var jobRecords: FetchedResults<JobRecord>
+    @Query(sort: \FROJob.jobDate, order: .reverse)
+    private var jobRecords: [FROJob]
 
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Tool.name, ascending: true)]
-    )
-    private var tools: FetchedResults<Tool>
+    @Query(sort: \FROTool.name, order: .forward)
+    private var tools: [FROTool]
 
     var body: some View {
         NavigationStack {
@@ -32,7 +46,7 @@ struct DashboardView: View {
                         .foregroundColor(Color(red: 0.976, green: 0.451, blue: 0.086)) // Safety orange
                         .padding(.horizontal, 12)
                         .padding(.vertical, 4)
-                        .background(Color(red: 0.976, green: 0.451, blue: 0.086).opacity(0.1))
+                        .background(Color(red: 0.976, green: 0.451, blue: 0.086).opacity(0.2))
                         .cornerRadius(4)
                         .padding(.top, 8)
                         .accessibilityLabel("For Reference Only disclaimer banner")
@@ -99,7 +113,7 @@ struct DashboardView: View {
                                 .fontWeight(.semibold)
                                 .padding(.horizontal)
 
-                            ForEach(jobRecords.prefix(10), id: \.objectID) { job in
+                            ForEach(jobRecords.prefix(10), id: \.id) { job in
                                 NavigationLink(destination: JobDetailView(job: job)) {
                                     JobCardView(job: job)
                                 }
@@ -114,6 +128,28 @@ struct DashboardView: View {
             }
             .navigationTitle("Dashboard")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Menu {
+                        Button {
+                            activeImportType = .pdf
+                            showingFileImporter = true
+                        } label: {
+                            Label("Import from PDF", systemImage: "doc.richtext")
+                        }
+                        Button {
+                            activeImportType = .frojob
+                            showingFileImporter = true
+                        } label: {
+                            Label("Import FRO Job", systemImage: "doc.zipper")
+                        }
+                    } label: {
+                        Image(systemName: "square.and.arrow.down")
+                            .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
+                    }
+                    .accessibilityIdentifier("importButton")
+                    .accessibilityLabel("Import")
+                    .accessibilityHint("Import a job from PDF or FRO Job file")
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: AboutView()) {
                         Image(systemName: "gearshape.fill")
@@ -122,6 +158,88 @@ struct DashboardView: View {
                     }
                 }
             }
+            .fileImporter(
+                isPresented: $showingFileImporter,
+                allowedContentTypes: allowedContentTypes,
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    guard let url = urls.first else { return }
+                    handleImportedFile(url)
+                case .failure(let error):
+                    importErrorMessage = error.localizedDescription
+                    showImportError = true
+                }
+            }
+            .sheet(isPresented: $showingImportReview) {
+                if let data = importedData {
+                    ImportJobView(importedData: data)
+                        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                }
+            }
+            .sheet(isPresented: $showingFrojobImportReview) {
+                if let parseResult = frojobParseResult {
+                    JobImportReviewView(
+                        parseResult: parseResult,
+                        onImportComplete: { jobRecord in
+                            importedJobAircraftType = jobRecord.aircraftType
+                            showFrojobImportSuccess = true
+                        }
+                    )
+                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                }
+            }
+            .alert("Import Error", isPresented: $showImportError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(importErrorMessage)
+            }
+            .alert("Job Imported!", isPresented: $showFrojobImportSuccess) {
+                Button("OK") { }
+            } message: {
+                Text("'\(importedJobAircraftType)' job imported successfully.")
+            }
+        }
+    }
+    // MARK: - Import Helpers
+
+    /// Returns the allowed UTTypes based on which import type the user selected.
+    private var allowedContentTypes: [UTType] {
+        switch activeImportType {
+        case .pdf:
+            return [.pdf]
+        case .frojob:
+            return [UTType(exportedAs: "com.forreference.frojob"), .data]
+        case .none:
+            return [.data]
+        }
+    }
+
+    /// Handles a file URL returned from the file importer, routing to PDF or .frojob logic.
+    private func handleImportedFile(_ url: URL) {
+        switch activeImportType {
+        case .pdf:
+            do {
+                importedData = try ImportService.importFromPDF(url: url)
+                showingImportReview = true
+            } catch {
+                importErrorMessage = error.localizedDescription
+                showImportError = true
+            }
+        case .frojob:
+            do {
+                frojobParseResult = try JobImportService.shared.parseFrojobBundle(
+                    at: url,
+                    context: viewContext
+                )
+                showingFrojobImportReview = true
+            } catch {
+                importErrorMessage = error.localizedDescription
+                showImportError = true
+            }
+        case .none:
+            break
         }
     }
 }
@@ -160,38 +278,34 @@ struct StatCard: View {
 
 /// Simple job card for the dashboard recent jobs list
 struct JobCardView: View {
-    @ObservedObject var job: JobRecord
+    @Bindable var job: JobRecord
 
     private var accessibilityDescription: String {
         var parts: [String] = []
-        if let aircraft = job.aircraftType {
-            parts.append(aircraft)
+        if !job.aircraftType.isEmpty {
+            parts.append(job.aircraftType)
         }
-        if let system = job.system, !system.isEmpty {
-            parts.append(system)
+        if !job.system.isEmpty {
+            parts.append(job.system)
         }
-        if let date = job.jobDate {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .medium
-            parts.append(formatter.string(from: date))
-        }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        parts.append(formatter.string(from: job.jobDate))
         return parts.joined(separator: ", ")
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(job.aircraftType ?? "Unknown Aircraft")
+                Text(job.aircraftType.isEmpty ? "Unknown Aircraft" : job.aircraftType)
                     .font(.headline)
                 Spacer()
-                if let date = job.jobDate {
-                    Text(date, style: .date)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                Text(job.jobDate, style: .date)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-            if let system = job.system, !system.isEmpty {
-                Text(system)
+            if !job.system.isEmpty {
+                Text(job.system)
                     .font(.subheadline)
                     .foregroundColor(Color(red: 0.145, green: 0.388, blue: 0.922))
             }
@@ -214,5 +328,5 @@ struct JobCardView: View {
 
 #Preview {
     DashboardView(selectedTab: .constant(0))
-        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
 }

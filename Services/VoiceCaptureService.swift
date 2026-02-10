@@ -1,35 +1,37 @@
 import Foundation
 import AVFoundation
 import Speech
+import Observation
 
 /// VoiceCaptureService handles audio recording and on-device speech transcription
 /// using Apple's Speech framework. Designed for mechanics to do voice brain-dumps
 /// after completing maintenance tasks.
 @MainActor
-class VoiceCaptureService: NSObject, ObservableObject {
+@Observable
+class VoiceCaptureService: NSObject {
 
     // MARK: - Published State
 
     /// Current recording state
-    @Published var isRecording = false
+    var isRecording = false
 
     /// Whether transcription is in progress
-    @Published var isTranscribing = false
+    var isTranscribing = false
 
     /// The transcribed text result
-    @Published var transcribedText: String = ""
+    var transcribedText: String = ""
 
     /// Current transcription status
-    @Published var transcriptionStatus: TranscriptionStatus = .idle
+    var transcriptionStatus: TranscriptionStatus = .idle
 
     /// Error message if something goes wrong
-    @Published var errorMessage: String?
+    var errorMessage: String?
 
     /// Audio level for visual feedback (0.0 to 1.0)
-    @Published var audioLevel: Float = 0.0
+    var audioLevel: Float = 0.0
 
     /// Recording duration in seconds
-    @Published var recordingDuration: TimeInterval = 0
+    var recordingDuration: TimeInterval = 0
 
     // MARK: - Types
 
@@ -43,20 +45,20 @@ class VoiceCaptureService: NSObject, ObservableObject {
 
     // MARK: - Private Properties
 
-    private var audioEngine: AVAudioEngine?
-    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
-    private var recognitionTask: SFSpeechRecognitionTask?
-    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
-    private var recordingTimer: Timer?
-    private var recordingStartTime: Date?
+    @ObservationIgnored private var audioEngine: AVAudioEngine?
+    @ObservationIgnored private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    @ObservationIgnored private var recognitionTask: SFSpeechRecognitionTask?
+    @ObservationIgnored private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    @ObservationIgnored private var recordingTimer: Timer?
+    @ObservationIgnored private var recordingStartTime: Date?
 
     // MARK: - Permission Status
 
     /// Whether microphone permission has been granted
-    @Published var microphonePermissionGranted = false
+    var microphonePermissionGranted = false
 
     /// Whether speech recognition permission has been granted
-    @Published var speechPermissionGranted = false
+    var speechPermissionGranted = false
 
     // MARK: - Initialization
 
