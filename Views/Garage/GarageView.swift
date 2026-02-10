@@ -567,8 +567,12 @@ struct GarageView: View {
     // MARK: - Tools Section
 
     /// Feature #119: Personal tools filtered from the full tools list, sorted by size then name
+    /// Excludes tools already displayed inside a Tool Set (group) or Tool Kit to prevent duplicates
     private var personalTools: [Tool] {
-        tools.filter { $0.ownershipType == "personal" }.sortedBySize()
+        let kitToolIDs = Set(personalToolKits.flatMap { $0.tools ?? [] }.map { $0.id })
+        return tools.filter {
+            $0.ownershipType == "personal" && $0.group == nil && !kitToolIDs.contains($0.id)
+        }.sortedBySize()
     }
 
     /// Feature #119: Borrowed tools filtered from the full tools list, sorted by size then name
@@ -577,8 +581,12 @@ struct GarageView: View {
     }
 
     /// Feature #119: Shop tools filtered from the full tools list, sorted by size then name
+    /// Excludes tools already displayed inside a Tool Set (group) or Tool Kit to prevent duplicates
     private var shopTools: [Tool] {
-        tools.filter { $0.ownershipType == "shop" }.sortedBySize()
+        let kitToolIDs = Set(shopToolKits.flatMap { $0.tools ?? [] }.map { $0.id })
+        return tools.filter {
+            $0.ownershipType == "shop" && $0.group == nil && !kitToolIDs.contains($0.id)
+        }.sortedBySize()
     }
 
     /// Non-borrowed tools (personal + shop) that are NOT in any group, sorted by size then name

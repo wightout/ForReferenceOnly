@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import SwiftData
 
 /// View for editing an existing tool entry in the Garage.
 /// Pre-populates fields with existing data and saves changes to Core Data.
@@ -12,11 +13,21 @@ struct EditToolView: View {
 
     @Bindable var tool: Tool
 
+    /// Fetch all tool sets for the set picker
+    @Query(sort: [SortDescriptor(\FROToolGroup.sortOrder, order: .forward), SortDescriptor(\FROToolGroup.name, order: .forward)])
+    private var allGroups: [FROToolGroup]
+
+    /// Fetch all tool kits for the kit picker
+    @Query(sort: \FROToolKit.name, order: .forward)
+    private var allKits: [FROToolKit]
+
     @State private var name: String = ""
     @State private var ownershipType: String = "personal"
     @State private var borrowedFrom: String = ""
     @State private var notes: String = ""
     @State private var aliasText: String = ""
+    @State private var selectedGroup: FROToolGroup?
+    @State private var selectedKitIDs: Set<UUID> = []
     @State private var showingError = false
     @State private var errorMessage = ""
     @State private var showingSuccess = false
@@ -37,6 +48,22 @@ struct EditToolView: View {
     @State private var willBeRemovedFromKits: Bool = false
 
     private let ownershipOptions = ["personal", "shop", "borrowed"]
+
+    /// Filtered Tool Sets matching the current ownership type
+    private var matchingGroups: [FROToolGroup] {
+        allGroups.filter { $0.ownershipType == ownershipType }
+    }
+
+    /// Builds a display name showing the set hierarchy path
+    private func groupDisplayName(for group: FROToolGroup) -> String {
+        var path = [group.name]
+        var current = group
+        while let parent = current.parentGroup {
+            path.insert(parent.name, at: 0)
+            current = parent
+        }
+        return path.joined(separator: " > ")
+    }
 
     var body: some View {
         NavigationStack {
@@ -63,14 +90,22 @@ struct EditToolView: View {
                     .onChange(of: ownershipType) { oldValue, newValue in
                         // Check if tool will be removed from group due to borrowed status
                         // OR due to ownership mismatch (Feature #133)
-                        if let group = tool.group {
+                        if let group = selectedGroup {
                             let groupOwnership = group.ownershipType
                             willBeRemovedFromGroup = (newValue == "borrowed") || (groupOwnership != newValue)
                         } else {
                             willBeRemovedFromGroup = false
                         }
-                        let kitCount = tool.toolKits?.count ?? 0
-                        willBeRemovedFromKits = (newValue == "borrowed" && kitCount > 0)
+                        willBeRemovedFromKits = (newValue == "borrowed" && !selectedKitIDs.isEmpty)
+
+                        // Clear group/kit selections when switching to borrowed
+                        if newValue == "borrowed" {
+                            selectedGroup = nil
+                            selectedKitIDs = []
+                        } else if let group = selectedGroup, group.ownershipType != newValue {
+                            // Clear group if ownership no longer matches
+                            selectedGroup = nil
+                        }
                     }
 
                     // Feature #104: Borrowed from field autocompletes from previous entries
@@ -113,6 +148,84 @@ struct EditToolView: View {
                         }
                         .padding(.vertical, 4)
                         .accessibilityIdentifier("editTool_kitRemovalWarning")
+                    }
+                }
+
+                // MARK: - Set Assignment
+                // Only shown for Personal and Shop tools (borrowed tools cannot be in sets)
+                if ownershipType != "borrowed" {
+                    Section {
+                        if matchingGroups.isEmpty {
+                            HStack(spacing: 8) {
+                                Image(systemName: "folder.badge.questionmark")
+                                    .foregroundColor(.secondary)
+                                Text("No \(ownershipType == "personal" ? "Personal" : "Shop") Tool Sets available")
+                                    .foregroundColor(.secondary)
+                            }
+                            .font(.subheadline)
+                            .padding(.vertical, 4)
+                        } else {
+                            Picker("Set", selection: $selectedGroup) {
+                                Text("No Set").tag(nil as FROToolGroup?)
+                                ForEach(matchingGroups, id: \.id) { group in
+                                    Text(groupDisplayName(for: group))
+                                        .tag(group as FROToolGroup?)
+                                }
+                            }
+                            .accessibilityIdentifier("editToolGroupPicker")
+                        }
+                    } header: {
+                        Text("Tool Set (Optional)")
+                    } footer: {
+                        Text("\(ownershipType == "personal" ? "Personal" : "Shop") tools can only be in \(ownershipType == "personal" ? "Personal" : "Shop") Tool Sets.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // MARK: - Kit Assignment
+                // Only shown for Personal and Shop tools (borrowed tools cannot be in kits)
+                if ownershipType != "borrowed" {
+                    Section {
+                        if allKits.isEmpty {
+                            HStack(spacing: 8) {
+                                Image(systemName: "bag.badge.questionmark")
+                                    .foregroundColor(.secondary)
+                                Text("No Tool Kits available")
+                                    .foregroundColor(.secondary)
+                            }
+                            .font(.subheadline)
+                            .padding(.vertical, 4)
+                        } else {
+                            ForEach(allKits, id: \.id) { kit in
+                                Button {
+                                    if selectedKitIDs.contains(kit.id) {
+                                        selectedKitIDs.remove(kit.id)
+                                    } else {
+                                        selectedKitIDs.insert(kit.id)
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(kit.name)
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                        if selectedKitIDs.contains(kit.id) {
+                                            Image(systemName: "checkmark")
+                                                .foregroundColor(.accentColor)
+                                        }
+                                    }
+                                }
+                                .accessibilityIdentifier("editToolKit_\(kit.name)")
+                            }
+                        }
+                    } header: {
+                        Text("Tool Kits (Optional)")
+                    } footer: {
+                        if !allKits.isEmpty {
+                            Text("Select one or more kits this tool belongs to.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
 
@@ -222,6 +335,10 @@ struct EditToolView: View {
                 // Feature #122: Track original kit count for warning display
                 originalKitCount = tool.toolKits?.count ?? 0
 
+                // Initialize group and kit selections from current tool state
+                selectedGroup = tool.group
+                selectedKitIDs = Set((tool.toolKits ?? []).map { $0.id })
+
                 // Load existing photos
                 if !photosLoaded {
                     let loaded = ToolPhotoService.shared.loadAllPhotos(for: tool)
@@ -245,36 +362,24 @@ struct EditToolView: View {
         tool.name = trimmedName
         tool.ownershipType = ownershipType
 
-        // Feature #121 & #122 & #133: Handle group/kit removal based on ownership
+        // Feature #121 & #122 & #133: Handle group/kit assignment based on ownership
         if ownershipType == "borrowed" {
             let trimmedBorrowed = borrowedFrom.trimmingCharacters(in: .whitespacesAndNewlines)
             tool.borrowedFrom = trimmedBorrowed.isEmpty ? nil : trimmedBorrowed
 
             // Feature #121: Remove from any group - borrowed tools are standalone
-            if tool.group != nil {
-                let removedGroupName = tool.group?.name ?? "unknown"
-                tool.group = nil
-                print("EditToolView: Removed tool '\(trimmedName)' from group '\(removedGroupName)' due to borrowed ownership")
-            }
-
+            tool.group = nil
             // Feature #122: Remove from any kits - borrowed tools cannot be in kits
-            if let kits = tool.toolKits, !kits.isEmpty {
-                let kitNames = kits.map { $0.name }.joined(separator: ", ")
-                tool.toolKits = []
-                print("EditToolView: Removed tool '\(trimmedName)' from \(kits.count) kit(s): [\(kitNames)] due to borrowed ownership")
-            }
+            tool.toolKits = []
         } else {
             tool.borrowedFrom = nil
 
-            // Feature #133: Remove from group if ownership no longer matches the group's ownership
-            if let group = tool.group {
-                let groupOwnership = group.ownershipType
-                if groupOwnership != ownershipType {
-                    let removedGroupName = group.name
-                    tool.group = nil
-                    print("EditToolView: Removed tool '\(trimmedName)' from group '\(removedGroupName)' due to ownership mismatch (\(ownershipType) tool in \(groupOwnership) group)")
-                }
-            }
+            // Apply group selection
+            tool.group = selectedGroup
+
+            // Apply kit selections
+            let selectedKits = allKits.filter { selectedKitIDs.contains($0.id) }
+            tool.toolKits = selectedKits
         }
 
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
