@@ -228,44 +228,34 @@ struct GarageView: View {
             }
             .sheet(isPresented: $showingAddTool) {
                 AddToolView()
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
             .sheet(isPresented: $showingAddConsumable) {
                 AddConsumableView()
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
             .sheet(isPresented: $showingAddChemical) {
                 AddChemicalView()
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
             .sheet(item: $toolToEdit) { tool in
                 EditToolView(tool: tool)
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
             .sheet(item: $consumableToEdit) { consumable in
                 EditConsumableView(consumable: consumable)
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
             .sheet(item: $chemicalToEdit) { chemical in
                 EditChemicalView(chemical: chemical)
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
             .sheet(isPresented: $showingAddToolGroup) {
                 AddToolGroupView(parentGroup: addGroupParent)
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
             .sheet(isPresented: $showingAddToolKit) {
                 AddToolKitView()
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
             .sheet(item: $toolGroupToEdit) { group in
                 EditToolGroupView(toolGroup: group)
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
             // Feature #139: Edit tool kit sheet
             .sheet(item: $toolKitToEdit) { kit in
                 EditToolKitView(toolKit: kit)
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
             }
             // Bulk add tools sheet removed — inline tool creation in Add/Edit Tool Set replaces it
             .alert("Delete Tool?", isPresented: $showingDeleteToolConfirmation) {
@@ -327,7 +317,7 @@ struct GarageView: View {
                             showImportSuccess = true
                         }
                     )
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                    
                 }
             }
             .alert("Import Error", isPresented: $showImportError) {
@@ -439,7 +429,7 @@ struct GarageView: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier("\(prefix)_\(tool.id.uuidString)")
         } else {
-            NavigationLink(destination: ToolDetailView(tool: tool).modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
+            NavigationLink(destination: ToolDetailView(tool: tool)) {
                 rowView
             }
             .accessibilityIdentifier("\(prefix)_\(tool.id.uuidString)")
@@ -718,7 +708,7 @@ struct GarageView: View {
                 // Feature #139: Swipe and context menu to edit kit
                 ForEach(personalToolKits, id: \.id) { kit in
                     toolKitRow(for: kit) {
-                        NavigationLink(destination: ToolKitDetailView(toolKit: kit).modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
+                        NavigationLink(destination: ToolKitDetailView(toolKit: kit)) {
                             ToolKitRowView(toolKit: kit)
                         }
                         .swipeActions(edge: .leading) {
@@ -783,7 +773,7 @@ struct GarageView: View {
                 .onDelete(perform: deleteBorrowedTools)
 
                 // Purchase Justification link
-                NavigationLink(destination: PurchaseJustificationView().modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
+                NavigationLink(destination: PurchaseJustificationView()) {
                     HStack(spacing: 12) {
                         Image(systemName: "chart.bar.doc.horizontal.fill")
                             .font(.body)
@@ -861,7 +851,7 @@ struct GarageView: View {
                 // Feature #139: Swipe and context menu to edit kit
                 ForEach(shopToolKits, id: \.id) { kit in
                     toolKitRow(for: kit) {
-                        NavigationLink(destination: ToolKitDetailView(toolKit: kit).modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
+                        NavigationLink(destination: ToolKitDetailView(toolKit: kit)) {
                             ToolKitRowView(toolKit: kit)
                         }
                         .swipeActions(edge: .leading) {
@@ -911,7 +901,7 @@ struct GarageView: View {
     /// Button displayed at the top of the tools section for quick access to borrowed tool history.
     /// Always visible without scrolling, above all tool sections.
     private var frequentlyBorrowedButton: some View {
-        NavigationLink(destination: PurchaseJustificationView().modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
+        NavigationLink(destination: PurchaseJustificationView()) {
             HStack(spacing: 12) {
                 // Icon with orange background circle
                 ZStack {
@@ -1864,7 +1854,7 @@ struct ToolGroupRowView: View {
                             .accessibilityIdentifier("selectToolInSet_\(tool.id.uuidString)")
                         } else {
                             // Normal mode: NavigationLink to detail
-                            NavigationLink(destination: ToolDetailView(tool: tool).modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
+                            NavigationLink(destination: ToolDetailView(tool: tool)) {
                                 GroupToolRowView(tool: tool, groupMeasurementType: group.measurementType)
                             }
                             .padding(.leading, 20)
@@ -2623,7 +2613,7 @@ struct ToolKitDetailView: View {
                         .accessibilityIdentifier("toolKitEmptyState")
                 } else {
                     ForEach(kitTools, id: \.id) { tool in
-                        NavigationLink(destination: ToolDetailView(tool: tool).modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
+                        NavigationLink(destination: ToolDetailView(tool: tool)) {
                             HStack {
                                 Image(systemName: "wrench.fill")
                                     .foregroundColor(industrialBlue)
@@ -2719,7 +2709,7 @@ struct ToolKitDetailView: View {
         // Feature #139: Sheet for editing kit
         .sheet(isPresented: $showingEditKit) {
             EditToolKitView(toolKit: toolKit)
-                .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                
         }
         .onChange(of: showingEditKit) { _, isShowing in
             // Reload hero photo after editing (user may have changed photos)
@@ -2795,5 +2785,5 @@ struct ToolKitDetailView: View {
 
 #Preview {
     GarageView()
-        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+        
 }

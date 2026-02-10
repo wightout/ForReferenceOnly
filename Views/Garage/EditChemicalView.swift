@@ -129,5 +129,5 @@ struct EditChemicalView: View {
 #Preview {
     let chemical = FROChemical(name: "MIL-PRF-83282", category: "fluid")
     EditChemicalView(chemical: chemical)
-        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+        
 }

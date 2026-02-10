@@ -314,5 +314,5 @@ struct EditToolView: View {
 #Preview {
     let tool = FROTool(name: "Test Wrench", ownershipType: "personal", notes: "Standard wrench")
     EditToolView(tool: tool)
-        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+        
 }

@@ -134,5 +134,5 @@ struct AddChemicalView: View {
 
 #Preview {
     AddChemicalView()
-        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+        
 }

@@ -573,7 +573,7 @@ struct AddToGaragePromptView_Previews: PreviewProvider {
         AddToGaragePromptView(
             onDismiss: { }
         )
-        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+        
     }
 }
 #endif

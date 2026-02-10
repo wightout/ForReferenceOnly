@@ -31,7 +31,7 @@ Every push to `develop` and every PR triggers:
 - **Build** -- `xcodebuild build` with code signing disabled
 - **Test** -- `xcodebuild test` runs the full test suite
 
-CI is defined in `.github/workflows/ci.yml`.
+CI is defined in `.github/workflows/ios.yml`.
 
 ## Release Process
 

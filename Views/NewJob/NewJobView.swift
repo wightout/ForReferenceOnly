@@ -667,16 +667,16 @@ struct NewJobView: View {
                 switch sheet {
                 case .toolPicker:
                     GarageToolPickerView(selectedToolIDs: $selectedToolIDs)
-                        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                        
                 case .consumablePicker:
                     GarageConsumablePickerView(selectedConsumableIDs: $selectedConsumableIDs)
-                        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                        
                 case .chemicalPicker:
                     GarageChemicalPickerView(selectedChemicalIDs: $selectedChemicalIDs)
-                        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                        
                 case .partEntry:
                     PartEntryView(selectedPartIDs: $selectedPartIDs)
-                        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                        
                 case .voiceCapture:
                     VoiceCaptureView(
                         onTranscriptionWithCandidates: { toolIDs, consumableIDs, chemicalIDs, transcribedText in
@@ -703,7 +703,7 @@ struct NewJobView: View {
                             set: { if !$0 { activeSheet = nil } }
                         )
                     )
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                    
                 case .addToGaragePrompt:
                     AddToGaragePromptView(
                         tools: onTheFlyTools,
@@ -716,7 +716,7 @@ struct NewJobView: View {
                             showingSaveSuccess = true
                         }
                     )
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                    
                 }
             }
             .alert("Job Saved!", isPresented: $showingSaveSuccess) {
@@ -1004,5 +1004,5 @@ struct NewJobView: View {
 
 #Preview {
     NewJobView(selectedTab: .constant(1))
-        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+        
 }

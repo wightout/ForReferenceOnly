@@ -141,7 +141,7 @@ struct PurchaseJustificationView: View {
                             .padding(.horizontal)
 
                             ForEach(toolsSortedByUsage, id: \.id) { tool in
-                                NavigationLink(destination: ToolDetailView(tool: tool).modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
+                                NavigationLink(destination: ToolDetailView(tool: tool)) {
                                     PurchaseJustificationRowView(
                                         tool: tool,
                                         usageCount: usageCount(for: tool)
@@ -325,6 +325,6 @@ struct PurchaseJustificationRowView: View {
 #Preview {
     NavigationStack {
         PurchaseJustificationView()
-            .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+            
     }
 }

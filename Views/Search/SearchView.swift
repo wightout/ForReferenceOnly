@@ -267,7 +267,7 @@ struct SearchView: View {
                         if (selectedFilter == .tool || selectedFilter == .all) && !filteredTools.isEmpty {
                             Section(header: Text("Tools")) {
                                 ForEach(filteredTools, id: \.id) { tool in
-                                    NavigationLink(destination: ToolDetailView(tool: tool).modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
+                                    NavigationLink(destination: ToolDetailView(tool: tool)) {
                                         VStack(alignment: .leading, spacing: 4) {
                                             HStack(spacing: 8) {
                                                 Image(systemName: "wrench.and.screwdriver.fill")
@@ -302,7 +302,7 @@ struct SearchView: View {
                         if !filteredRecords.isEmpty {
                             Section(header: Text("Job Records")) {
                                 ForEach(filteredRecords, id: \.id) { job in
-                                    NavigationLink(destination: JobDetailView(job: job).modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
+                                    NavigationLink(destination: JobDetailView(job: job)) {
                                         SearchResultCardView(job: job)
                                     }
                                     .buttonStyle(.plain)
@@ -427,5 +427,5 @@ struct SearchResultCardView: View {
 
 #Preview {
     SearchView()
-        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+        
 }

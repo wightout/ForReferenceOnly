@@ -436,7 +436,7 @@ struct EditToolKitView: View {
             }
             .sheet(isPresented: $showingToolPicker) {
                 ToolKitToolPickerView(selectedToolIDs: $selectedNewToolIDs, kitOwnershipType: ownershipType.rawValue)
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                    
             }
             .onChange(of: ownershipType) { _, _ in
                 // Clear tool management state when ownership changes
@@ -624,5 +624,5 @@ enum ToolKitOwnershipType: String, CaseIterable, Identifiable {
 #Preview {
     let kit = FROToolKit(name: "Hydraulic Pump R&R Kit", ownershipType: "personal")
     EditToolKitView(toolKit: kit)
-        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+        
 }

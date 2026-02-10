@@ -25,3 +25,20 @@ Pods/
 # Swift Package Manager
 .build/
 .swiftpm/
+
+# Backups & merge artifacts
+*.pbxproj.bak
+Info.plist.bak
+*.orig
+
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# IDE settings
+.vscode/
+.idea/
+
+# Crash reports
+Crash Reports/

@@ -175,7 +175,7 @@ struct DashboardView: View {
             .sheet(isPresented: $showingImportReview) {
                 if let data = importedData {
                     ImportJobView(importedData: data)
-                        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                        
                 }
             }
             .sheet(isPresented: $showingFrojobImportReview) {
@@ -187,7 +187,7 @@ struct DashboardView: View {
                             showFrojobImportSuccess = true
                         }
                     )
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                    
                 }
             }
             .alert("Import Error", isPresented: $showImportError) {
@@ -328,5 +328,5 @@ struct JobCardView: View {
 
 #Preview {
     DashboardView(selectedTab: .constant(0))
-        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+        
 }

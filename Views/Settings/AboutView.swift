@@ -390,7 +390,7 @@ struct AboutView: View {
         .sheet(isPresented: $showingImportReview) {
             if let data = importedData {
                 ImportJobView(importedData: data)
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                    
             }
         }
         .alert("Import Error", isPresented: $showImportError) {

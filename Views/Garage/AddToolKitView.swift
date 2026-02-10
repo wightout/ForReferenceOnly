@@ -229,7 +229,7 @@ struct AddToolKitView: View {
             .sheet(isPresented: $showingToolPicker) {
                 // Feature #134: Pass kit ownership type to filter tools matching ownership
                 ToolKitToolPickerView(selectedToolIDs: $selectedToolIDs, kitOwnershipType: ownershipType)
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                    
             }
             .alert("Error", isPresented: $showingError) {
                 Button("OK") { }
@@ -530,5 +530,5 @@ struct ToolKitToolPickerView: View {
 
 #Preview {
     AddToolKitView()
-        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+        
 }

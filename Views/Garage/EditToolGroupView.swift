@@ -638,5 +638,5 @@ struct EditToolGroupView: View {
 #Preview {
     let group = FROToolGroup(name: "1/4-inch Drive Sockets", sortOrder: 0, ownershipType: "personal")
     EditToolGroupView(toolGroup: group)
-        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+        
 }

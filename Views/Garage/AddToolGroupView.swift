@@ -440,5 +440,5 @@ struct AddToolGroupView: View {
 
 #Preview {
     AddToolGroupView()
-        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+        
 }

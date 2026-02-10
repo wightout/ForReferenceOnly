@@ -161,15 +161,15 @@ struct CandidateReviewView: View {
             }
             .sheet(isPresented: $showingToolPicker) {
                 GarageToolPickerView(selectedToolIDs: $manuallyAddedToolIDs)
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                    
             }
             .sheet(isPresented: $showingConsumablePicker) {
                 GarageConsumablePickerView(selectedConsumableIDs: $manuallyAddedConsumableIDs)
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                    
             }
             .sheet(isPresented: $showingChemicalPicker) {
                 GarageChemicalPickerView(selectedChemicalIDs: $manuallyAddedChemicalIDs)
-                    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                    
             }
         }
     }

@@ -129,5 +129,5 @@ struct EditConsumableView: View {
 #Preview {
     let consumable = FROConsumable(name: "MS20995C32 Safety Wire", category: "safety_wire")
     EditConsumableView(consumable: consumable)
-        .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+        
 }

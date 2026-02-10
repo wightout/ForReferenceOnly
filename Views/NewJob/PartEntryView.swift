@@ -285,7 +285,7 @@ struct PartEntryView: View {
         @State private var partIDs: Set<UUID> = []
         var body: some View {
             PartEntryView(selectedPartIDs: $partIDs)
-                .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                
         }
     }
     return PreviewWrapper()

@@ -99,7 +99,7 @@ struct VoiceCaptureView: View {
                     },
                     isPresented: $showingCandidateReview
                 )
-                .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                
             }
         }
     }
@@ -502,5 +502,5 @@ struct VoiceCaptureView: View {
         },
         isPresented: .constant(true)
     )
-    .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+    
 }

@@ -177,7 +177,7 @@ struct ToolDetailView: View {
                             .foregroundColor(.secondary)
 
                         ForEach(linkedJobs, id: \.id) { job in
-                            NavigationLink(destination: JobDetailView(job: job).modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)) {
+                            NavigationLink(destination: JobDetailView(job: job)) {
                                 HStack(spacing: 12) {
                                     Image(systemName: "doc.text.fill")
                                         .foregroundColor(industrialBlue)
@@ -251,7 +251,7 @@ struct ToolDetailView: View {
         }
         .sheet(isPresented: $showingEditTool) {
             EditToolView(tool: tool)
-                .modelContainer(for: [FROTool.self, FROJob.self, FROToolGroup.self, FROToolKit.self, FROConsumable.self, FROChemical.self, FROPart.self], inMemory: true)
+                
         }
         .fullScreenCover(isPresented: $showingFullscreenPhoto) {
             ToolPhotoFullscreenView(
